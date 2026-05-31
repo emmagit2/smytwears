@@ -6,23 +6,22 @@ export default function AuthCallback() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === "SIGNED_IN" && session) {
-          window.history.replaceState(null, "", window.location.pathname);
-          navigate("/admin", { replace: true });
-        } else if (event === "SIGNED_OUT" || !session) {
-          navigate("/login", { replace: true });
-        }
+    const handle = async () => {
+      const { data: { session }, error } = await supabase.auth.exchangeCodeForSession(
+        window.location.href
+      );
+      console.log("✅ Exchange session:", session?.user?.email, error);
+      if (error) {
+        navigate("/login?error=" + encodeURIComponent(error.message), { replace: true });
+        return;
       }
-    );
-
-    // Fallback for already signed in
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate("/admin", { replace: true });
-    });
-
-    return () => subscription.unsubscribe();
+      if (session) {
+        const isAdmin = session.user?.app_metadata?.role === "admin" ||
+                        session.user?.email === "basseyanikan22@gmail.com";
+        navigate(isAdmin ? "/admin" : "/", { replace: true });
+      }
+    };
+    handle();
   }, [navigate]);
 
   return (
