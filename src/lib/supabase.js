@@ -6,6 +6,9 @@ export const supabase = createClient(
   {
     auth: {
       flowType: "pkce",
+      persistSession: true,
+      detectSessionInUrl: true,
+      storageKey: "smyt-auth",
     },
   }
 );
