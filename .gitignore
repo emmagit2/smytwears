@@ -1,0 +1,102 @@
+# ========================
+# NODE / NPM
+# ========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.npm
+.yarn/
+
+# ========================
+# ENVIRONMENT & SECRETS
+# ========================
+.env
+.env.local
+.env.development
+.env.staging
+.env.production
+.env*.local
+
+# ========================
+# BUILD OUTPUT
+# ========================
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+public/build/
+
+# ========================
+# FASHION / MEDIA ASSETS (large files)
+# ========================
+# Uncomment these if you don't want to track large media in Git
+# *.psd
+# *.ai
+# *.sketch
+# *.fig
+# *.xd
+# uploads/
+# assets/videos/
+# assets/raw/
+
+# ========================
+# OS FILES
+# ========================
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ========================
+# EDITOR / IDE
+# ========================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+*.bak
+*~
+
+# ========================
+# LOGS & TEMP
+# ========================
+logs/
+*.log
+tmp/
+temp/
+.tmp/
+
+# ========================
+# TESTING
+# ========================
+coverage/
+.nyc_output/
+.jest-cache/
+
+# ========================
+# DEPLOYMENT
+# ========================
+.vercel
+.netlify
+.firebase/
+.serverless/
+
+# ========================
+# MISC
+# ========================
+*.tgz
+*.zip
+*.tar.gz
