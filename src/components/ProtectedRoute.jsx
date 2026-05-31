@@ -14,10 +14,10 @@ export default function ProtectedRoute({
   unauthenticatedElement = <Navigate to="/login" replace />,
   requireAdmin           = true,
 }) {
-  const { isAuthenticated, isAdmin, isLoadingAuth, authChecked } = useAuth();
+  const { user, isAuthenticated, isAdmin, isLoadingAuth, authChecked } = useAuth();
 
-  // Still checking session
-  if (isLoadingAuth || !authChecked) return fallback;
+  // Still checking session or profile still loading
+  if (isLoadingAuth || !authChecked || (user && !isAuthenticated)) return fallback;
 
   // Not logged in → redirect to login
   if (!isAuthenticated) return unauthenticatedElement;
@@ -25,6 +25,6 @@ export default function ProtectedRoute({
   // Logged in but not admin → show error
   if (requireAdmin && !isAdmin) return <UserNotRegisteredError />;
 
-  // ✅ Render children (Admin.jsx) directly — not Outlet
+  // ✅ Render children
   return children;
 }
