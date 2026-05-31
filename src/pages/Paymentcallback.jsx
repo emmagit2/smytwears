@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Loader2, ArrowRight } from 'lucide-react';
-import { paymentsApi } from '@/api/apiclient';
+import { paymentsApi } from '@/api/apiClient';
 import { formatPrice } from '@/data/products';
 
 // Paystack redirects to:
