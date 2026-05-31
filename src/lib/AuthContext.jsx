@@ -12,22 +12,28 @@ export const AuthProvider = ({ children }) => {
 
   const fetchProfile = async (authUser) => {
     if (!authUser) return null;
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", authUser.id)
-      .single();
-    if (error) {
-      console.error("Profile fetch error:", error.message);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", authUser.id)
+        .single();
+      console.log("👤 Profile:", data, "Error:", error);
+      if (error) {
+        console.error("Profile fetch error:", error.message);
+        return null;
+      }
+      return data;
+    } catch (err) {
+      console.error("Profile fetch exception:", err);
       return null;
     }
-    return data;
   };
 
   useEffect(() => {
-    // Listen FIRST — catches SIGNED_IN from OAuth hash redirect
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("🔄 Auth event:", event, session?.user?.email);
         if (event === "SIGNED_IN" && session?.user) {
           const prof = await fetchProfile(session.user);
           setUser(session.user);
@@ -36,26 +42,26 @@ export const AuthProvider = ({ children }) => {
           setIsLoadingAuth(false);
           setAuthChecked(true);
         }
-
         if (event === "SIGNED_OUT") {
           setUser(null);
           setProfile(null);
           setIsLoadingAuth(false);
           setAuthChecked(true);
         }
-
         if (event === "TOKEN_REFRESHED" && session?.user) {
+          const prof = await fetchProfile(session.user);
           setUser(session.user);
+          setProfile(prof);
           setIsLoadingAuth(false);
           setAuthChecked(true);
         }
       }
     );
 
-    // Then check for existing session (page refresh / returning user)
     const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log("🔑 Session:", session?.user?.email, "Error:", error);
         if (session?.user) {
           const prof = await fetchProfile(session.user);
           setUser(session.user);
