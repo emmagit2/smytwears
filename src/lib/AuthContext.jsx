@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useContext } from "react";
+import { createContext, useState, useEffect, useContext, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
 const AuthContext = createContext();
@@ -9,6 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [authChecked,   setAuthChecked]   = useState(false);
   const [authError,     setAuthError]     = useState(null);
+  const isMounted = useRef(true);
 
   const fetchProfile = async (authUser) => {
     if (!authUser) return null;
@@ -18,38 +19,70 @@ export const AuthProvider = ({ children }) => {
         .select("*")
         .eq("id", authUser.id)
         .single();
-      if (error) {
-        console.error("Profile fetch error:", error.message);
-        return null;
-      }
+      if (error) return null;
       return data;
-    } catch (err) {
-      console.error("Profile fetch exception:", err);
+    } catch {
       return null;
     }
   };
 
   useEffect(() => {
+    isMounted.current = true;
+
+    const boot = async () => {
+      try {
+        // Step 1: get existing session first
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log("🔑 Boot session:", session?.user?.email);
+
+        if (session?.user && isMounted.current) {
+          const prof = await fetchProfile(session.user);
+          if (isMounted.current) {
+            setUser(session.user);
+            setProfile(prof);
+          }
+        }
+      } catch (err) {
+        if (isMounted.current) setAuthError(err);
+      } finally {
+        if (isMounted.current) {
+          setIsLoadingAuth(false);
+          setAuthChecked(true);
+        }
+      }
+    };
+
+    boot();
+
+    // Step 2: listen for future changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("🔄 Auth event:", event, session?.user?.email);
+        if (!isMounted.current) return;
 
         if (session?.user) {
           const prof = await fetchProfile(session.user);
-          setUser(session.user);
-          setProfile(prof);
-          setAuthError(null);
+          if (isMounted.current) {
+            setUser(session.user);
+            setProfile(prof);
+            setIsLoadingAuth(false);
+            setAuthChecked(true);
+          }
         } else {
-          setUser(null);
-          setProfile(null);
+          if (isMounted.current) {
+            setUser(null);
+            setProfile(null);
+            setIsLoadingAuth(false);
+            setAuthChecked(true);
+          }
         }
-
-        setIsLoadingAuth(false);
-        setAuthChecked(true);
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted.current = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const logout = async () => {
