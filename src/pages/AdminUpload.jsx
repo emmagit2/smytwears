@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, X, Plus, ImagePlus, Tag, Layers, Ruler, FileText, CheckCircle } from 'lucide-react';
 import { IMAGES } from '@/data/images';
-import { productsApi } from '@/api/apiclient';
+import { productsApi } from '@/api/apiClient';
 
 const CATEGORIES   = ['men', 'women', 'accessories', 'caps'];
 const SIZES        = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'One Size'];
