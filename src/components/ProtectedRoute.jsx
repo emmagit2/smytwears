@@ -16,15 +16,16 @@ export default function ProtectedRoute({
 }) {
   const { user, isAuthenticated, isAdmin, isLoadingAuth, authChecked } = useAuth();
 
-  // Still checking session or profile still loading
+  console.log("🔐 ProtectedRoute:", { 
+    user: user?.email, 
+    isAuthenticated, 
+    isAdmin, 
+    isLoadingAuth, 
+    authChecked 
+  });
+
   if (isLoadingAuth || !authChecked || (user && !isAuthenticated)) return fallback;
-
-  // Not logged in → redirect to login
   if (!isAuthenticated) return unauthenticatedElement;
-
-  // Logged in but not admin → show error
   if (requireAdmin && !isAdmin) return <UserNotRegisteredError />;
-
-  // ✅ Render children
   return children;
 }
