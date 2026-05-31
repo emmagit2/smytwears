@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
 import { formatPrice, getProductImage } from '@/data/products';
-import { ordersApi, paymentsApi, deliveryApi } from '@/api/apiclient';
+import { ordersApi, paymentsApi, deliveryApi } from '@/api/apiClient';
 import { ChevronRight, Check, Loader2 } from 'lucide-react';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
