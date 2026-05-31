@@ -18,7 +18,6 @@ export const AuthProvider = ({ children }) => {
         .select("*")
         .eq("id", authUser.id)
         .single();
-      console.log("👤 Profile:", data, "Error:", error);
       if (error) {
         console.error("Profile fetch error:", error.message);
         return null;
@@ -34,49 +33,22 @@ export const AuthProvider = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("🔄 Auth event:", event, session?.user?.email);
-        if (event === "SIGNED_IN" && session?.user) {
-          const prof = await fetchProfile(session.user);
-          setUser(session.user);
-          setProfile(prof);
-          setAuthError(null);
-          setIsLoadingAuth(false);
-          setAuthChecked(true);
-        }
-        if (event === "SIGNED_OUT") {
-          setUser(null);
-          setProfile(null);
-          setIsLoadingAuth(false);
-          setAuthChecked(true);
-        }
-        if (event === "TOKEN_REFRESHED" && session?.user) {
-          const prof = await fetchProfile(session.user);
-          setUser(session.user);
-          setProfile(prof);
-          setIsLoadingAuth(false);
-          setAuthChecked(true);
-        }
-      }
-    );
 
-    const initAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        console.log("🔑 Session:", session?.user?.email, "Error:", error);
         if (session?.user) {
           const prof = await fetchProfile(session.user);
           setUser(session.user);
           setProfile(prof);
+          setAuthError(null);
+        } else {
+          setUser(null);
+          setProfile(null);
         }
-      } catch (err) {
-        console.error("Auth init error:", err);
-        setAuthError(err);
-      } finally {
+
         setIsLoadingAuth(false);
         setAuthChecked(true);
       }
-    };
+    );
 
-    initAuth();
     return () => subscription.unsubscribe();
   }, []);
 
