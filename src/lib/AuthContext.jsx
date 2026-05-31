@@ -14,14 +14,17 @@ export const AuthProvider = ({ children }) => {
   const fetchProfile = async (authUser) => {
     if (!authUser) return null;
     try {
+      console.log("📋 Fetching profile for:", authUser.id);
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", authUser.id)
         .single();
+      console.log("📋 Profile result:", data, "Error:", error?.message);
       if (error) return null;
       return data;
-    } catch {
+    } catch (err) {
+      console.error("Profile fetch exception:", err);
       return null;
     }
   };
@@ -31,7 +34,11 @@ export const AuthProvider = ({ children }) => {
 
     const boot = async () => {
       try {
-        // Step 1: get existing session first
+        // Skip boot on callback page — AuthCallback handles session exchange
+        if (window.location.pathname === "/auth/callback") {
+          return;
+        }
+
         const { data: { session } } = await supabase.auth.getSession();
         console.log("🔑 Boot session:", session?.user?.email);
 
@@ -54,7 +61,6 @@ export const AuthProvider = ({ children }) => {
 
     boot();
 
-    // Step 2: listen for future changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("🔄 Auth event:", event, session?.user?.email);
