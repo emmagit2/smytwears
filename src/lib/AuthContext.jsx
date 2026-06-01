@@ -14,17 +14,14 @@ export const AuthProvider = ({ children }) => {
   const fetchProfile = async (authUser) => {
     if (!authUser) return null;
     try {
-      console.log("📋 Fetching profile for:", authUser.id);
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", authUser.id)
         .single();
-      console.log("📋 Profile result:", data, "Error:", error?.message);
       if (error) return null;
       return data;
-    } catch (err) {
-      console.error("Profile fetch exception:", err);
+    } catch {
       return null;
     }
   };
@@ -32,43 +29,15 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     isMounted.current = true;
 
-    const boot = async () => {
-      try {
-        if (window.location.pathname === "/auth/callback") return;
-
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log("🔑 Boot session:", session?.user?.email);
-
-        if (session?.user && isMounted.current) {
-          const prof = await fetchProfile(session.user);
-          if (isMounted.current) {
-            setUser(session.user);
-            setProfile(prof);
-          }
-        }
-      } catch (err) {
-        if (isMounted.current) setAuthError(err);
-      } finally {
-        if (isMounted.current) {
-          setIsLoadingAuth(false);
-          setAuthChecked(true);
-        }
-      }
-    };
-
-    boot();
-
-    // ✅ No async inside onAuthStateChange — fetchProfile runs in setTimeout
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log("🔄 Auth event:", event, session?.user?.email);
         if (!isMounted.current) return;
 
         if (session?.user) {
           setUser(session.user);
           setTimeout(async () => {
+            if (!isMounted.current) return;
             const prof = await fetchProfile(session.user);
-            console.log("✅ Got profile:", prof);
             if (isMounted.current) {
               setProfile(prof);
               setIsLoadingAuth(false);
