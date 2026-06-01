@@ -5,7 +5,7 @@ import AdminUpload from './AdminUpload';
 import AdminOrders from './AdminOrders';
 import AdminAffiliates from './AdminAffiliates';
 import AdminCustomers from './AdminCustomers';
-import { ordersApi, productsApi } from '@/lib/api';
+import { ordersApi, productsApi } from '@/api/apiClient';
 import { IMAGES } from '@/data/images';
 import {
   LayoutDashboard, Package, PlusCircle, ShoppingCart,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Lock, Eye, FileText } from 'lucide-react';
+import { Shield, Lock, Eye, FileText, CreditCard } from 'lucide-react';
 
 export default function Privacy() {
   const sections = [
@@ -19,8 +19,13 @@ export default function Privacy() {
       content: `We take reasonable precautions to protect your personal information from unauthorised access, use, or disclosure. All payment information is processed through secure, encrypted payment gateways. However, no method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.`,
     },
     {
+      icon: CreditCard,
+      title: '4. Payment Security',
+      content: `All payments are processed securely through trusted payment providers. SMYT does not store your card information.`,
+    },
+    {
       icon: Shield,
-      title: '4. Sharing Your Information',
+      title: '5. Sharing Your Information',
       content: `SMYT does not sell, trade, or rent your personal information to third parties. We may share your information with trusted third-party service providers who assist us in operating our website and conducting our business (such as delivery partners), provided they agree to keep your information confidential.`,
     },
   ];
@@ -52,21 +57,24 @@ export default function Privacy() {
         ))}
 
         <div className="border-l-2 pl-6" style={{ borderColor: '#8e2424' }}>
-          <h2 className="text-sm uppercase tracking-wider font-bold mb-3">5. Cookies</h2>
+          <h2 className="text-sm uppercase tracking-wider font-bold mb-3">6. Cookies</h2>
           <p className="text-gray-600 text-sm leading-relaxed">
             Our website uses cookies to enhance your browsing experience and remember your preferences. You can choose to disable cookies through your browser settings, but this may affect some functionality of the site.
           </p>
         </div>
 
         <div className="border-l-2 pl-6" style={{ borderColor: '#8e2424' }}>
-          <h2 className="text-sm uppercase tracking-wider font-bold mb-3">6. Your Rights</h2>
+          <h2 className="text-sm uppercase tracking-wider font-bold mb-3">7. Your Rights</h2>
           <p className="text-gray-600 text-sm leading-relaxed">
-            You have the right to access, correct, or delete the personal information we hold about you. To make a request, contact us at <a href="mailto:selfmadeyoutoday@gmail.com" className="font-semibold underline" style={{ color: '#8e2424' }}>selfmadeyoutoday@gmail.com</a>.
+            You have the right to access, correct, or delete the personal information we hold about you. To make a request, contact us at{' '}
+            <a href="mailto:selfmadeyoutoday@gmail.com" className="font-semibold underline" style={{ color: '#8e2424' }}>
+              selfmadeyoutoday@gmail.com
+            </a>.
           </p>
         </div>
 
         <div className="border-l-2 pl-6" style={{ borderColor: '#8e2424' }}>
-          <h2 className="text-sm uppercase tracking-wider font-bold mb-3">7. Changes to This Policy</h2>
+          <h2 className="text-sm uppercase tracking-wider font-bold mb-3">8. Changes to This Policy</h2>
           <p className="text-gray-600 text-sm leading-relaxed">
             SMYT reserves the right to update this Privacy Policy at any time. Changes will be posted on this page with a revised date. Your continued use of the website constitutes acceptance of the updated policy.
           </p>
@@ -79,7 +87,10 @@ export default function Privacy() {
             <a href="mailto:selfmadeyoutoday@gmail.com" className="font-semibold" style={{ color: '#8e2424' }}>
               selfmadeyoutoday@gmail.com
             </a>
-            {' '}or call <a href="tel:07054527285" className="font-semibold" style={{ color: '#8e2424' }}>07054527285</a>.
+            {' '}or call{' '}
+            <a href="tel:07054527285" className="font-semibold" style={{ color: '#8e2424' }}>
+              07054527285
+            </a>.
           </p>
         </div>
       </div>

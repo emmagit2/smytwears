@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Truck, Shield, Zap, Instagram } from 'lucide-react';
 import { fetchBestSellers, fetchNewArrivals } from '@/data/products';
@@ -9,6 +9,9 @@ import HeroCarousel from '../components/HeroCarousel';
 import Testimonials from '../components/Testimonials';
 import OurCraft from '../components/OurCraft';
 import { useQuery } from '@tanstack/react-query';
+
+const VISIBLE_COUNT = 4;
+const INTERVAL_MS   = 4000;
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -23,10 +26,58 @@ export default function Home() {
     queryFn: fetchNewArrivals,
   });
 
+  const [displayedNew, setDisplayedNew]   = useState([]);
+  const [fadeStates, setFadeStates]       = useState(Array(VISIBLE_COUNT).fill(true));
+  const rotationRef                       = useRef(0);
+
+  useEffect(() => {
+    if (newArrivals.length > 0) {
+      setDisplayedNew(newArrivals.slice(0, VISIBLE_COUNT));
+      rotationRef.current = Math.min(VISIBLE_COUNT, newArrivals.length) % newArrivals.length;
+    }
+  }, [newArrivals]);
+
+  useEffect(() => {
+    if (newArrivals.length <= VISIBLE_COUNT) return;
+    const timer = setInterval(() => {
+      const slotIndex   = Math.floor(Math.random() * VISIBLE_COUNT);
+      const nextProduct = newArrivals[rotationRef.current];
+      rotationRef.current = (rotationRef.current + 1) % newArrivals.length;
+
+      setFadeStates(prev => {
+        const next = [...prev];
+        next[slotIndex] = false;
+        return next;
+      });
+
+      setTimeout(() => {
+        setDisplayedNew(prev => {
+          const next = [...prev];
+          next[slotIndex] = nextProduct;
+          return next;
+        });
+        setFadeStates(prev => {
+          const next = [...prev];
+          next[slotIndex] = true;
+          return next;
+        });
+      }, 400);
+    }, INTERVAL_MS);
+
+    return () => clearInterval(timer);
+  }, [newArrivals]);
+
+  // Card grid columns based on actual count shown
+  const count      = displayedNew.length || VISIBLE_COUNT;
+  const gridCols   =
+    count === 1 ? 'grid-cols-1 max-w-sm mx-auto' :
+    count === 2 ? 'grid-cols-2 max-w-xl mx-auto'  :
+    count === 3 ? 'grid-cols-2 sm:grid-cols-3'     :
+                  'grid-cols-2 lg:grid-cols-4';
+
   return (
     <div>
       <HeroCarousel />
-
       <OurCraft />
 
       {/* Brand Story */}
@@ -69,8 +120,8 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
             {[
-              { label: 'Men', image: IMAGES.menCollection, path: '/shop?category=men' },
-              { label: 'Women', image: IMAGES.womenCollection, path: '/shop?category=women' },
+              { label: 'Men',         image: IMAGES.menCollection,         path: '/shop?category=men' },
+              { label: 'Women',       image: IMAGES.womenCollection,       path: '/shop?category=women' },
               { label: 'Accessories', image: IMAGES.accessoriesCollection, path: '/shop?category=accessories' },
             ].map(col => (
               <Link key={col.label} to={col.path} className="group relative aspect-[3/4] overflow-hidden">
@@ -112,7 +163,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* New Arrivals */}
+      {/* ── New Arrivals — fixed 4, auto-rotates ── */}
       <section className="py-20 bg-secondary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-end justify-between mb-12">
@@ -120,14 +171,28 @@ export default function Home() {
               <span className="text-xs uppercase tracking-[0.3em] text-muted-foreground font-medium">Just Dropped</span>
               <h2 className="text-3xl sm:text-4xl font-bold mt-3 tracking-tight">New Arrivals</h2>
             </div>
+            {newArrivals.length > VISIBLE_COUNT && (
+              <Link
+                to="/shop"
+                className="hidden sm:flex items-center gap-2 text-sm uppercase tracking-[0.15em] font-semibold hover:opacity-70 transition-opacity"
+              >
+                View All <ArrowRight className="w-4 h-4" />
+              </Link>
+            )}
           </div>
-          <div className="flex gap-4 sm:gap-6 overflow-x-auto hide-scrollbar pb-4">
+
+          <div className={`grid gap-4 sm:gap-6 ${gridCols}`}>
             {loadingNew
-              ? Array(4).fill(0).map((_, i) => (
-                  <div key={i} className="min-w-[260px] sm:min-w-[300px]"><SkeletonCard /></div>
-                ))
-              : newArrivals.map(product => (
-                  <div key={product.id} className="min-w-[260px] sm:min-w-[300px]">
+              ? Array(VISIBLE_COUNT).fill(0).map((_, i) => <SkeletonCard key={i} />)
+              : displayedNew.map((product, i) => (
+                  <div
+                    key={product.id}
+                    style={{
+                      opacity:    fadeStates[i] ? 1 : 0,
+                      transform:  fadeStates[i] ? 'translateY(0)' : 'translateY(10px)',
+                      transition: 'opacity 0.4s ease, transform 0.4s ease',
+                    }}
+                  >
                     <ProductCard product={product} />
                   </div>
                 ))
@@ -143,9 +208,9 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-12 text-center">
             {[
-              { icon: Shield, title: 'Premium Quality', desc: "Every piece is crafted from premium fabrics. We don't cut corners — we build to last." },
-              { icon: Zap, title: 'Made for Movers', desc: 'Designed for those who are always on the go. Comfort meets style in every stitch.' },
-              { icon: Truck, title: 'Fast Delivery', desc: 'Nationwide delivery across Nigeria. Free shipping on orders above ₦50,000.' },
+              { icon: Shield, title: 'Premium Quality',  desc: "Every piece is crafted from premium fabrics. We don't cut corners — we build to last." },
+              { icon: Zap,    title: 'Made for Movers',  desc: 'Designed for those who are always on the go. Comfort meets style in every stitch.' },
+              { icon: Truck,  title: 'Fast Delivery',    desc: 'Nationwide delivery across Nigeria. Free shipping on orders above ₦50,000.' },
             ].map(({ icon: Icon, title, desc }) => (
               <div key={title} className="flex flex-col items-center">
                 <div className="w-14 h-14 border-2 border-foreground flex items-center justify-center mb-5">

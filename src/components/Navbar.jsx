@@ -1,95 +1,231 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Search, Heart, ShoppingBag, User, Menu, X, ChevronDown } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { IMAGES } from '@/data/images';
-import AnnouncementBar from './AnnouncementBar';
 import SearchOverlay from './SearchOverlay';
 
 const shopDropdown = [
   { label: 'All Products', path: '/shop' },
-  { label: 'Men', path: '/shop?category=men' },
-  { label: 'Women', path: '/shop?category=women' },
-  { label: 'Accessories', path: '/shop?category=accessories' },
-  { label: 'Caps', path: '/shop?category=caps' },
+  { label: 'Men',          path: '/shop?category=men' },
+  { label: 'Women',        path: '/shop?category=women' },
+  { label: 'Accessories',  path: '/shop?category=accessories' },
+  { label: 'Caps',         path: '/shop?category=caps' },
 ];
 
 const navLinks = [
-  { label: 'Home', path: '/' },
-  { label: 'Shop', path: '/shop', dropdown: shopDropdown },
-  { label: 'About', path: '/about' },
+  { label: 'Home',        path: '/' },
+  { label: 'Shop',        path: '/shop', dropdown: shopDropdown },
+  { label: 'About',       path: '/about' },
   { label: 'Track Order', path: '/track' },
-  { label: 'Contact', path: '/contact' },
+  { label: 'Contact',     path: '/contact' },
 ];
 
+const BRAND = '#8e2424';
+
 export default function Navbar() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [shopOpen, setShopOpen] = useState(false);
-  const { itemCount } = useCart();
-  const { wishlistCount } = useWishlist();
-  const location = useLocation();
+  const headerRef                     = useRef(null);
+  const [mobileOpen, setMobileOpen]   = useState(false);
+  const [searchOpen, setSearchOpen]   = useState(false);
+  const [scrolled, setScrolled]       = useState(false);
+  const [shopHovered, setShopHovered] = useState(false);
+  const { itemCount }                 = useCart();
+  const { wishlistCount }             = useWishlist();
+  const location                      = useLocation();
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   useEffect(() => {
     setMobileOpen(false);
-    setShopOpen(false);
+    setShopHovered(false);
   }, [location]);
+
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
+
+  // Base = white. Scrolled = brand color background, everything flips white.
+  const navBg       = scrolled ? BRAND : '#ffffff';
+  const textColor   = scrolled ? '#ffffff' : '#111111';
+  const mutedColor  = scrolled ? 'rgba(255,255,255,0.7)' : '#888888';
+  const iconColor   = scrolled ? '#ffffff' : '#555555';
+  const borderColor = scrolled ? 'rgba(255,255,255,0.15)' : '#f0f0f0';
+
+  // Shop bubble: on white bg = red outline/text, hover = filled red
+  // On brand bg = white outline/text, hover = filled white text on white bg
+  const shopBubbleBorder = scrolled ? 'rgba(255,255,255,0.8)' : BRAND;
+  const shopBubbleText   = shopHovered ? '#ffffff' : (scrolled ? '#ffffff' : BRAND);
+  const shopRippleBg     = scrolled ? 'rgba(255,255,255,0.2)' : BRAND;
+
+  const NAVBAR_HEIGHT = 68;
 
   return (
     <>
-      <AnnouncementBar />
-      <header className={`sticky top-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-100'
-          : 'bg-white border-b border-gray-100'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-18 lg:h-20">
 
-            {/* Mobile menu btn */}
-            <button className="lg:hidden p-2 -ml-2 hover:bg-gray-50 transition-colors" onClick={() => setMobileOpen(!mobileOpen)}>
-              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+      <header
+        ref={headerRef}
+        className="sticky top-0 z-50"
+        style={{
+          background: navBg,
+          borderBottom: `1px solid ${borderColor}`,
+          boxShadow: scrolled ? '0 2px 24px rgba(142,36,36,0.18)' : 'none',
+          transition: 'background 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease',
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: `${NAVBAR_HEIGHT}px` }}>
+
+            {/* Hamburger — mobile only */}
+            <button
+              className="lg:hidden flex-shrink-0"
+              style={{
+                padding: '8px',
+                marginLeft: '-4px',
+                color: iconColor,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'color 0.3s ease',
+                zIndex: 60,
+              }}
+              onClick={() => setMobileOpen(prev => !prev)}
+              aria-label="Toggle menu"
+            >
+              {mobileOpen
+                ? <X style={{ width: 20, height: 20 }} />
+                : <Menu style={{ width: 20, height: 20 }} />
+              }
             </button>
 
             {/* Logo */}
-            <Link to="/" className="flex-shrink-0">
-              <img src={IMAGES.logo} alt="SMYT" className="h-10 sm:h-12" />
+            <Link
+              to="/"
+              style={{ flexShrink: 0, marginLeft: 'auto', marginRight: 'auto' }}
+              className="lg:ml-0 lg:mr-0"
+            >
+              <img
+                src={IMAGES.logo}
+                alt="SMYT"
+                style={{
+                  height: '38px',
+                  filter: scrolled ? 'brightness(0) invert(1)' : 'none',
+                  transition: 'filter 0.35s ease',
+                }}
+              />
             </Link>
 
-            {/* Desktop Nav */}
-            <nav className="hidden lg:flex items-center gap-1">
-              {navLinks.map(link => (
+            {/* Desktop nav */}
+            <nav
+              className="hidden lg:flex items-center"
+              style={{ gap: '28px', flex: 1, justifyContent: 'center' }}
+            >
+              {navLinks.map(link =>
                 link.dropdown ? (
-                  <div key={link.path} className="relative group" onMouseEnter={() => setShopOpen(true)} onMouseLeave={() => setShopOpen(false)}>
-                    <Link
-                      to={link.path}
-                      className="flex items-center gap-1 px-4 py-2 text-xs uppercase tracking-[0.15em] font-semibold text-gray-600 hover:text-gray-900 transition-colors"
+                  <div
+                    key={link.path}
+                    style={{ position: 'relative' }}
+                    onMouseEnter={() => setShopHovered(true)}
+                    onMouseLeave={() => setShopHovered(false)}
+                  >
+                    <button
+                      style={{
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '7px 20px',
+                        fontSize: '11px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.18em',
+                        fontWeight: 700,
+                        color: shopBubbleText,
+                        border: `1.5px solid ${shopBubbleBorder}`,
+                        borderRadius: '999px',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        overflow: 'hidden',
+                        transition: 'color 0.25s ease, border-color 0.25s ease',
+                      }}
                     >
-                      {link.label}
-                      <ChevronDown className="w-3 h-3" />
-                    </Link>
-                    <div className="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                      <div className="bg-white border border-gray-100 shadow-xl py-2 w-48">
+                      <span
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          borderRadius: '999px',
+                          backgroundColor: shopRippleBg,
+                          transform: shopHovered ? 'scale(1)' : 'scale(0)',
+                          opacity: shopHovered ? 1 : 0,
+                          transition: 'transform 0.28s ease, opacity 0.28s ease',
+                        }}
+                      />
+                      <span style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        {link.label}
+                        <ChevronDown
+                          style={{
+                            width: 12, height: 12,
+                            transform: shopHovered ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.2s ease',
+                          }}
+                        />
+                      </span>
+                    </button>
+
+                    {/* Dropdown */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: '50%',
+                        transform: `translateX(-50%) translateY(${shopHovered ? '0px' : '-8px'})`,
+                        paddingTop: '10px',
+                        opacity: shopHovered ? 1 : 0,
+                        visibility: shopHovered ? 'visible' : 'hidden',
+                        transition: 'opacity 0.2s ease, transform 0.2s ease',
+                        pointerEvents: shopHovered ? 'auto' : 'none',
+                        zIndex: 100,
+                      }}
+                    >
+                      <div
+                        style={{
+                          background: '#fff',
+                          border: '1px solid #f0f0f0',
+                          borderRadius: '14px',
+                          boxShadow: '0 12px 40px rgba(0,0,0,0.1)',
+                          padding: '8px 0',
+                          width: '200px',
+                        }}
+                      >
                         {link.dropdown.map(item => (
                           <Link
                             key={item.path}
                             to={item.path}
-                            className="block px-5 py-2.5 text-xs uppercase tracking-wider font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+                            style={{
+                              display: 'block',
+                              padding: '10px 20px',
+                              fontSize: '11px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.1em',
+                              fontWeight: 500,
+                              color: '#999',
+                              textDecoration: 'none',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.color = '#111'; e.currentTarget.style.background = '#fafafa'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = '#999'; e.currentTarget.style.background = 'transparent'; }}
                           >
                             {item.label}
                           </Link>
                         ))}
-                        {/* Red accent line */}
-                        <div className="mx-5 mt-2 pt-2 border-t border-gray-100">
-                          <Link to="/shop" className="block text-xs font-bold uppercase tracking-widest" style={{ color: '#8e2424' }}>
+                        <div style={{ margin: '6px 20px 4px', paddingTop: '8px', borderTop: '1px solid #f0f0f0' }}>
+                          <Link
+                            to="/shop"
+                            style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: BRAND, textDecoration: 'none' }}
+                          >
                             View All →
                           </Link>
                         </div>
@@ -100,86 +236,197 @@ export default function Navbar() {
                   <Link
                     key={link.path}
                     to={link.path}
-                    className={`px-4 py-2 text-xs uppercase tracking-[0.15em] font-semibold transition-colors ${
-                      location.pathname === link.path
-                        ? 'text-gray-900'
-                        : 'text-gray-500 hover:text-gray-900'
-                    }`}
+                    style={{
+                      position: 'relative',
+                      fontSize: '11px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.18em',
+                      fontWeight: 600,
+                      color: location.pathname === link.path ? textColor : mutedColor,
+                      textDecoration: 'none',
+                      transition: 'color 0.3s ease',
+                    }}
                   >
                     {link.label}
+                    <span
+                      style={{
+                        position: 'absolute',
+                        bottom: '-2px',
+                        left: 0,
+                        height: '1px',
+                        backgroundColor: scrolled ? '#ffffff' : BRAND,
+                        width: location.pathname === link.path ? '100%' : '0%',
+                        transition: 'width 0.2s ease, background-color 0.3s ease',
+                      }}
+                    />
                   </Link>
                 )
-              ))}
+              )}
             </nav>
 
             {/* Right icons */}
-            <div className="flex items-center gap-1">
-              <button onClick={() => setSearchOpen(true)} className="p-2.5 hover:bg-gray-50 transition-colors rounded-sm">
-                <Search className="w-4.5 h-4.5 w-[18px] h-[18px]" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+              <button
+                onClick={() => setSearchOpen(true)}
+                style={{ padding: '8px', color: iconColor, background: 'none', border: 'none', cursor: 'pointer', borderRadius: '8px', transition: 'color 0.3s ease' }}
+                aria-label="Search"
+              >
+                <Search style={{ width: 17, height: 17 }} />
               </button>
-              <Link to="/wishlist" className="p-2.5 hover:bg-gray-50 transition-colors relative hidden sm:flex rounded-sm">
-                <Heart className="w-[18px] h-[18px]" />
+
+              <Link
+                to="/wishlist"
+                className="hidden sm:flex"
+                style={{ position: 'relative', padding: '8px', color: iconColor, borderRadius: '8px', transition: 'color 0.3s ease' }}
+                aria-label="Wishlist"
+              >
+                <Heart style={{ width: 17, height: 17 }} />
                 {wishlistCount > 0 && (
-                  <span className="absolute top-1 right-1 w-3.5 h-3.5 text-white text-[9px] font-bold flex items-center justify-center rounded-full" style={{ backgroundColor: '#8e2424' }}>
+                  <span style={{ position: 'absolute', top: '4px', right: '4px', width: '14px', height: '14px', background: scrolled ? '#fff' : BRAND, color: scrolled ? BRAND : '#fff', fontSize: '9px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', transition: 'background 0.3s ease, color 0.3s ease' }}>
                     {wishlistCount}
                   </span>
                 )}
               </Link>
-              <Link to="/cart" className="p-2.5 hover:bg-gray-50 transition-colors relative rounded-sm">
-                <ShoppingBag className="w-[18px] h-[18px]" />
+
+              <Link
+                to="/cart"
+                style={{ position: 'relative', padding: '8px', color: iconColor, borderRadius: '8px', transition: 'color 0.3s ease' }}
+                aria-label="Cart"
+              >
+                <ShoppingBag style={{ width: 17, height: 17 }} />
                 {itemCount > 0 && (
-                  <span className="absolute top-1 right-1 w-3.5 h-3.5 text-white text-[9px] font-bold flex items-center justify-center rounded-full" style={{ backgroundColor: '#8e2424' }}>
+                  <span style={{ position: 'absolute', top: '4px', right: '4px', width: '14px', height: '14px', background: scrolled ? '#fff' : BRAND, color: scrolled ? BRAND : '#fff', fontSize: '9px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', transition: 'background 0.3s ease, color 0.3s ease' }}>
                     {itemCount}
                   </span>
                 )}
               </Link>
-              <Link to="/login" className="hidden sm:flex p-2.5 hover:bg-gray-50 transition-colors rounded-sm">
-                <User className="w-[18px] h-[18px]" />
-              </Link>
-              {/* CTA */}
+
               <Link
-                to="/shop"
-                className="hidden lg:flex ml-3 items-center px-5 py-2 text-xs uppercase tracking-widest font-bold text-white transition-colors"
-                style={{ backgroundColor: '#8e2424' }}
+                to="/login"
+                className="hidden sm:flex"
+                style={{ padding: '8px', color: iconColor, borderRadius: '8px', transition: 'color 0.3s ease' }}
+                aria-label="Account"
               >
-                Shop Now
+                <User style={{ width: 17, height: 17 }} />
               </Link>
             </div>
           </div>
         </div>
-
-        {/* Mobile drawer */}
-        {mobileOpen && (
-          <div className="lg:hidden fixed inset-0 top-[calc(2rem+5rem)] z-40 bg-white overflow-y-auto">
-            <div className="px-4 py-2 border-b border-gray-100">
-              <div className="flex flex-col divide-y divide-gray-100">
-                {navLinks.map(link => (
-                  <div key={link.path}>
-                    <Link to={link.path} className="flex items-center justify-between py-4 text-sm font-semibold uppercase tracking-wider text-gray-800">
-                      {link.label}
-                    </Link>
-                    {link.dropdown && (
-                      <div className="pb-3 pl-4 space-y-2">
-                        {link.dropdown.map(item => (
-                          <Link key={item.path} to={item.path} className="block text-xs uppercase tracking-wider text-gray-500 py-1">
-                            {item.label}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                <Link to="/login" className="py-4 text-sm font-semibold uppercase tracking-wider text-gray-800">Account</Link>
-              </div>
-            </div>
-            <div className="p-4">
-              <Link to="/shop" className="block w-full text-center py-3 text-xs uppercase tracking-widest font-bold text-white" style={{ backgroundColor: '#8e2424' }}>
-                Shop Collection
-              </Link>
-            </div>
-          </div>
-        )}
       </header>
+
+      {/* ── Mobile drawer — sits OUTSIDE header so it's not clipped ── */}
+      <div
+        className="lg:hidden"
+        style={{
+          position: 'fixed',
+          top: `${NAVBAR_HEIGHT + 32}px`, // below announcement bar + navbar
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 49,
+          background: '#ffffff',
+          transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.32s cubic-bezier(0.4,0,0.2,1)',
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <div style={{ flex: 1, padding: '8px 24px' }}>
+          {navLinks.map(link => (
+            <div key={link.path} style={{ borderBottom: '1px solid #f4f4f4' }}>
+              <Link
+                to={link.path}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '16px 0',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.15em',
+                  color: location.pathname === link.path ? BRAND : '#1a1a1a',
+                  textDecoration: 'none',
+                }}
+              >
+                {link.label}
+                {link.dropdown && <ChevronDown style={{ width: 14, height: 14, color: '#ccc' }} />}
+              </Link>
+              {link.dropdown && (
+                <div style={{ paddingBottom: '14px', paddingLeft: '12px' }}>
+                  {link.dropdown.map(item => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      style={{
+                        display: 'block',
+                        padding: '6px 0',
+                        fontSize: '11px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.12em',
+                        color: '#aaa',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+
+          <div style={{ borderBottom: '1px solid #f4f4f4' }}>
+            <Link to="/login" style={{ display: 'block', padding: '16px 0', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#1a1a1a', textDecoration: 'none' }}>
+              Account
+            </Link>
+          </div>
+          <div style={{ borderBottom: '1px solid #f4f4f4' }}>
+            <Link to="/wishlist" style={{ display: 'block', padding: '16px 0', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#1a1a1a', textDecoration: 'none' }}>
+              Wishlist {wishlistCount > 0 && `(${wishlistCount})`}
+            </Link>
+          </div>
+        </div>
+
+        <div style={{ padding: '16px 24px 40px' }}>
+          <Link
+            to="/shop"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%',
+              padding: '14px',
+              fontSize: '11px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.18em',
+              fontWeight: 700,
+              color: '#ffffff',
+              background: BRAND,
+              borderRadius: '999px',
+              textDecoration: 'none',
+            }}
+          >
+            Shop Collection
+          </Link>
+        </div>
+      </div>
+
+      {/* Mobile backdrop */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            top: `${NAVBAR_HEIGHT + 32}px`,
+            background: 'rgba(0,0,0,0.25)',
+            zIndex: 48,
+          }}
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
       <SearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
