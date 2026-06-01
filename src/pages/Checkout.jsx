@@ -115,6 +115,7 @@ function ContactStep({
           </FormField>
         </div>
 
+        {/* State — always enabled */}
         <FormField label="State" required>
           <select value={form.stateCode} onChange={onStateChange} className={inputClass}>
             <option value="">Select state</option>
@@ -124,33 +125,47 @@ function ContactStep({
           </select>
         </FormField>
 
+        {/* LGA — always tappable on mobile; shows prompt if no state yet */}
         <FormField label="LGA" required loading={loadingLgas}>
           <select
             name="lga"
             value={form.lga}
             onChange={onLgaChange}
-            disabled={!form.stateCode || loadingLgas}
+            disabled={loadingLgas}
             className={inputClass}
           >
-            <option value="">Select LGA</option>
-            {lgas.map((l) => (
-              <option key={l.name} value={l.name}>{l.name}</option>
-            ))}
+            {!form.stateCode ? (
+              <option value="">Select a state first</option>
+            ) : (
+              <>
+                <option value="">Select LGA</option>
+                {lgas.map((l) => (
+                  <option key={l.name} value={l.name}>{l.name}</option>
+                ))}
+              </>
+            )}
           </select>
         </FormField>
 
+        {/* Ward — always tappable on mobile; shows prompt if no LGA yet */}
         <FormField label="Area / Ward" loading={loadingWards}>
           <select
             name="ward"
             value={form.ward}
             onChange={onFieldChange}
-            disabled={!form.lga || loadingWards}
+            disabled={loadingWards}
             className={inputClass}
           >
-            <option value="">Select area (optional)</option>
-            {wards.map((w) => (
-              <option key={w.name} value={w.name}>{w.name}</option>
-            ))}
+            {!form.lga ? (
+              <option value="">Select an LGA first</option>
+            ) : (
+              <>
+                <option value="">Select area (optional)</option>
+                {wards.map((w) => (
+                  <option key={w.name} value={w.name}>{w.name}</option>
+                ))}
+              </>
+            )}
           </select>
         </FormField>
 
@@ -402,9 +417,6 @@ export default function Checkout() {
         })),
       });
 
-      // orders.js already initializes Paystack and returns paystack_url.
-      // Fall back to a separate /payments/initialize call only if it's missing
-      // (e.g. Paystack was briefly unreachable when the order was placed).
       let redirectUrl = order.paystack_url;
 
       if (!redirectUrl) {
