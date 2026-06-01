@@ -1,20 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
   const { isAuthenticated, isAdmin, authChecked } = useAuth();
 
   useEffect(() => {
-    // Exchange the code first
     supabase.auth.exchangeCodeForSession(window.location.href)
       .catch(console.error);
   }, []);
 
   useEffect(() => {
-    // Wait until AuthContext is fully ready, then navigate
     if (!authChecked) return;
     if (isAuthenticated) {
       navigate(isAdmin ? "/admin" : "/", { replace: true });
