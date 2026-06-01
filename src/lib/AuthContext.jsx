@@ -34,10 +34,7 @@ export const AuthProvider = ({ children }) => {
 
     const boot = async () => {
       try {
-        // Skip boot on callback page — AuthCallback handles session exchange
-        if (window.location.pathname === "/auth/callback") {
-          return;
-        }
+        if (window.location.pathname === "/auth/callback") return;
 
         const { data: { session } } = await supabase.auth.getSession();
         console.log("🔑 Boot session:", session?.user?.email);
@@ -61,26 +58,28 @@ export const AuthProvider = ({ children }) => {
 
     boot();
 
+    // ✅ No async inside onAuthStateChange — fetchProfile runs in setTimeout
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log("🔄 Auth event:", event, session?.user?.email);
         if (!isMounted.current) return;
 
         if (session?.user) {
-          const prof = await fetchProfile(session.user);
-          if (isMounted.current) {
-            setUser(session.user);
-            setProfile(prof);
-            setIsLoadingAuth(false);
-            setAuthChecked(true);
-          }
+          setUser(session.user);
+          setTimeout(async () => {
+            const prof = await fetchProfile(session.user);
+            console.log("✅ Got profile:", prof);
+            if (isMounted.current) {
+              setProfile(prof);
+              setIsLoadingAuth(false);
+              setAuthChecked(true);
+            }
+          }, 0);
         } else {
-          if (isMounted.current) {
-            setUser(null);
-            setProfile(null);
-            setIsLoadingAuth(false);
-            setAuthChecked(true);
-          }
+          setUser(null);
+          setProfile(null);
+          setIsLoadingAuth(false);
+          setAuthChecked(true);
         }
       }
     );
