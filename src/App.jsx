@@ -5,6 +5,8 @@ import { CartProvider } from "./context/CartContext.jsx";
 import { WishlistProvider } from "./context/WishlistContext.jsx";
 import { AuthProvider } from "./lib/AuthContext.jsx";
 import { Toaster } from "react-hot-toast";
+import ScrollToTop from '@/components/ScrollToTop';
+
 
 import Layout from "./components/Layout.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
@@ -47,6 +49,7 @@ export default function App() {
           <WishlistProvider>
             <BrowserRouter>
               <Toaster position="top-right" />
+                    <ScrollToTop /> 
               <Routes>
 
                 {/* OAuth callback — no layout */}

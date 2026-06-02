@@ -69,11 +69,11 @@ export default function Home() {
 
   // Card grid columns based on actual count shown
   const count      = displayedNew.length || VISIBLE_COUNT;
-  const gridCols   =
-    count === 1 ? 'grid-cols-1 max-w-sm mx-auto' :
-    count === 2 ? 'grid-cols-2 max-w-xl mx-auto'  :
-    count === 3 ? 'grid-cols-2 sm:grid-cols-3'     :
-                  'grid-cols-2 lg:grid-cols-4';
+const gridCols =
+  count === 1 ? 'grid-cols-2 lg:grid-cols-4' :
+  count === 2 ? 'grid-cols-2 lg:grid-cols-4' :
+  count === 3 ? 'grid-cols-2 sm:grid-cols-3' :
+                'grid-cols-2 lg:grid-cols-4';
 
   return (
     <div>
@@ -210,7 +210,7 @@ export default function Home() {
             {[
               { icon: Shield, title: 'Premium Quality',  desc: "Every piece is crafted from premium fabrics. We don't cut corners — we build to last." },
               { icon: Zap,    title: 'Made for Movers',  desc: 'Designed for those who are always on the go. Comfort meets style in every stitch.' },
-              { icon: Truck,  title: 'Fast Delivery',    desc: 'Nationwide delivery across Nigeria. Free shipping on orders above ₦50,000.' },
+              { icon: Truck,  title: 'Fast Delivery',    desc: 'Nationwide delivery across Nigeria. We bring premium, quality pieces straight to your door' },
             ].map(({ icon: Icon, title, desc }) => (
               <div key={title} className="flex flex-col items-center">
                 <div className="w-14 h-14 border-2 border-foreground flex items-center justify-center mb-5">
@@ -225,7 +225,7 @@ export default function Home() {
       </section>
 
       {/* Instagram */}
-      <section className="py-20 bg-secondary">
+    {/*  <section className="py-20 bg-secondary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Instagram className="w-6 h-6 mx-auto mb-4" />
           <h2 className="text-2xl font-bold tracking-tight">Follow us @selfmade.smyt</h2>
@@ -238,7 +238,7 @@ export default function Home() {
             ))}
           </div>
         </div>
-      </section>
+      </section>*/}
 
       {/* Affiliate Banner */}
       <section className="py-16 sm:py-20 overflow-hidden relative" style={{ backgroundColor: '#8e2424' }}>
