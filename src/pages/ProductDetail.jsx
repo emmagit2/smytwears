@@ -523,7 +523,6 @@ export default function ProductDetail() {
 
             {/* Trust strip */}
             <div className="trust">
-              <div className="trust-cell"><Truck size={14}/><span>Free Ship $80+</span></div>
               <div className="trust-cell"><RotateCcw size={14}/><span>30-Day Returns</span></div>
               <div className="trust-cell"><ShieldCheck size={14}/><span>Secure Pay</span></div>
             </div>

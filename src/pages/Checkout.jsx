@@ -8,14 +8,12 @@ import { ChevronRight, Check, Loader2 } from 'lucide-react';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STEPS = ['Contact & Delivery', 'Delivery Method', 'Payment'];
-const FREE_DELIVERY_THRESHOLD = 50000;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const normalizeState = (name = '') => name.toLowerCase().trim();
 
 const getBaseDeliveryFee = (stateName = '', subtotal = 0) => {
-  if (subtotal >= FREE_DELIVERY_THRESHOLD) return 0;
   const s = normalizeState(stateName);
   if (s === 'lagos')                return 2500;
   if (s === 'fct' || s === 'abuja') return 3000;
@@ -300,9 +298,7 @@ function OrderSummary({ items, subtotal, deliveryFee, total, stateName }) {
               : formatPrice(deliveryFee)}
           </span>
         </div>
-        {subtotal >= FREE_DELIVERY_THRESHOLD && (
-          <p className="text-xs text-green-600">🎉 Free delivery on orders above {formatPrice(FREE_DELIVERY_THRESHOLD)}</p>
-        )}
+       
         <div className="flex justify-between border-t border-border pt-2 font-bold">
           <span>Total</span>
           <span className="text-lg">{formatPrice(total)}</span>

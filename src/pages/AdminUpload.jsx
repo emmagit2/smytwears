@@ -3,15 +3,22 @@ import { Upload, X, Plus, ImagePlus, Tag, Layers, Ruler, FileText, CheckCircle }
 import { IMAGES } from '@/data/images';
 import { productsApi } from '@/api/apiClient';
 
-const CATEGORIES   = ['men', 'women', 'accessories', 'caps'];
-const SIZES        = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'One Size'];
-const COLOR_OPTIONS = [
-  { name: 'Black', hex: '#000000' },
-  { name: 'White', hex: '#FFFFFF' },
-  { name: 'Red',   hex: '#CC0000' },
-  { name: 'Ash',   hex: '#6B7280' },
-  { name: 'Navy',  hex: '#1E3A5F' },
-  { name: 'Cream', hex: '#F5F5DC' },
+const CATEGORIES = ['men', 'women', 'accessories', 'caps'];
+const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'One Size'];
+
+const PRESET_COLORS = [
+  { name: 'Black',  hex: '#000000' },
+  { name: 'White',  hex: '#FFFFFF' },
+  { name: 'Red',    hex: '#CC0000' },
+  { name: 'Ash',    hex: '#6B7280' },
+  { name: 'Navy',   hex: '#1E3A5F' },
+  { name: 'Cream',  hex: '#F5F5DC' },
+  { name: 'Green',  hex: '#2D6A4F' },
+  { name: 'Yellow', hex: '#F4C430' },
+  { name: 'Brown',  hex: '#7B4F2E' },
+  { name: 'Pink',   hex: '#E75480' },
+  { name: 'Purple', hex: '#6B3FA0' },
+  { name: 'Orange', hex: '#E8631A' },
 ];
 
 const Section = ({ icon: Icon, title, children }) => (
@@ -26,7 +33,6 @@ const Section = ({ icon: Icon, title, children }) => (
   </div>
 );
 
-// Upload a single file directly to Cloudinary (browser → Cloudinary, no backend)
 const uploadToCloudinary = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
@@ -53,8 +59,10 @@ export default function AdminUpload() {
   const [uploadProgress, setUploadProgress] = useState('');
   const [success,        setSuccess]        = useState(false);
   const [error,          setError]          = useState('');
-  const [selectedColors, setSelectedColors] = useState([]);
+  const [selectedColors, setSelectedColors] = useState([]); // [{ name, hex }]
   const [selectedSizes,  setSelectedSizes]  = useState([]);
+  const [customColorName, setCustomColorName] = useState('');
+  const [customColorHex,  setCustomColorHex]  = useState('#000000');
 
   const [form, setForm] = useState({
     name: '', category: 'men', price: '', original_price: '',
@@ -69,6 +77,11 @@ export default function AdminUpload() {
 
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files);
+    const oversized = files.filter(f => f.size > 10 * 1024 * 1024);
+    if (oversized.length > 0) {
+      setError(`${oversized.length} image(s) exceed the 10MB limit. Please compress them first.`);
+      return;
+    }
     setImageFiles(prev => [
       ...prev,
       ...files.map(file => ({ file, preview: URL.createObjectURL(file) })),
@@ -82,8 +95,25 @@ export default function AdminUpload() {
     });
   };
 
-  const toggleColor = (name) =>
-    setSelectedColors(prev => prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]);
+  const togglePresetColor = (color) => {
+    setSelectedColors(prev =>
+      prev.find(c => c.name === color.name)
+        ? prev.filter(c => c.name !== color.name)
+        : [...prev, color]
+    );
+  };
+
+  const addCustomColor = () => {
+    const name = customColorName.trim();
+    if (!name) return;
+    if (selectedColors.find(c => c.name.toLowerCase() === name.toLowerCase())) return;
+    setSelectedColors(prev => [...prev, { name, hex: customColorHex }]);
+    setCustomColorName('');
+    setCustomColorHex('#000000');
+  };
+
+  const removeColor = (name) =>
+    setSelectedColors(prev => prev.filter(c => c.name !== name));
 
   const toggleSize = (size) =>
     setSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]);
@@ -97,6 +127,8 @@ export default function AdminUpload() {
     setImageFiles([]);
     setSelectedColors([]);
     setSelectedSizes([]);
+    setCustomColorName('');
+    setCustomColorHex('#000000');
     setUploadProgress('');
   };
 
@@ -106,7 +138,6 @@ export default function AdminUpload() {
     setUploading(true);
 
     try {
-      // Step 1: upload images directly to Cloudinary
       let uploadedImages = [];
       if (imageFiles.length > 0) {
         setUploadProgress(`Uploading ${imageFiles.length} image${imageFiles.length > 1 ? 's' : ''} to Cloudinary...`);
@@ -115,7 +146,6 @@ export default function AdminUpload() {
         );
       }
 
-      // Step 2: create the product
       setUploadProgress('Saving product...');
       const response = await productsApi.create({
         name:           form.name,
@@ -126,7 +156,7 @@ export default function AdminUpload() {
         details:        form.details,
         care:           form.care,
         shipping:       form.shipping,
-        colors:         selectedColors,
+        colors:         selectedColors.map(c => c.name),
         sizes:          selectedSizes,
         is_new:         form.is_new,
         is_best_seller: form.is_best_seller,
@@ -134,7 +164,6 @@ export default function AdminUpload() {
       });
       const product = response.data;
 
-      // Step 3: send Cloudinary URLs to backend to save in DB
       if (uploadedImages.length > 0) {
         setUploadProgress('Saving image records...');
         await productsApi.saveImages(product.id, uploadedImages);
@@ -218,7 +247,9 @@ export default function AdminUpload() {
           </label>
         </div>
         {imageFiles.length > 0 && (
-          <p className="text-xs text-muted-foreground mt-2">{imageFiles.length} image{imageFiles.length > 1 ? 's' : ''} selected — first image will be the main photo</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            {imageFiles.length} image{imageFiles.length > 1 ? 's' : ''} selected — first image will be the main photo
+          </p>
         )}
       </Section>
 
@@ -227,21 +258,27 @@ export default function AdminUpload() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
             <label className="block text-xs uppercase tracking-wider font-medium mb-2">Product Name *</label>
-            <input name="name" value={form.name} onChange={handleChange} required placeholder="e.g. Self Starter Jogger — Black" className="w-full border border-border px-4 py-3 text-sm focus:outline-none focus:border-foreground" />
+            <input name="name" value={form.name} onChange={handleChange} required placeholder="e.g. Self Starter Jogger — Black"
+              className="w-full border border-border px-4 py-3 text-sm focus:outline-none focus:border-foreground" />
           </div>
           <div>
             <label className="block text-xs uppercase tracking-wider font-medium mb-2">Category *</label>
-            <select name="category" value={form.category} onChange={handleChange} className="w-full border border-border px-4 py-3 text-sm focus:outline-none focus:border-foreground bg-background">
+            <select name="category" value={form.category} onChange={handleChange}
+              className="w-full border border-border px-4 py-3 text-sm focus:outline-none focus:border-foreground bg-background">
               {CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-xs uppercase tracking-wider font-medium mb-2">Price (₦) *</label>
-            <input name="price" value={form.price} onChange={handleChange} required type="number" placeholder="33000" className="w-full border border-border px-4 py-3 text-sm focus:outline-none focus:border-foreground" />
+            <input name="price" value={form.price} onChange={handleChange} required type="number" placeholder="33000"
+              className="w-full border border-border px-4 py-3 text-sm focus:outline-none focus:border-foreground" />
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-wider font-medium mb-2">Original Price (₦) <span className="normal-case text-muted-foreground">(optional)</span></label>
-            <input name="original_price" value={form.original_price} onChange={handleChange} type="number" placeholder="38000" className="w-full border border-border px-4 py-3 text-sm focus:outline-none focus:border-foreground" />
+            <label className="block text-xs uppercase tracking-wider font-medium mb-2">
+              Original Price (₦) <span className="normal-case text-muted-foreground">(optional)</span>
+            </label>
+            <input name="original_price" value={form.original_price} onChange={handleChange} type="number" placeholder="38000"
+              className="w-full border border-border px-4 py-3 text-sm focus:outline-none focus:border-foreground" />
           </div>
           <div className="flex gap-6">
             {[
@@ -250,7 +287,8 @@ export default function AdminUpload() {
               { name: 'in_stock',       label: 'In Stock'    },
             ].map(opt => (
               <label key={opt.name} className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" name={opt.name} checked={form[opt.name]} onChange={handleChange} className="accent-foreground w-4 h-4" />
+                <input type="checkbox" name={opt.name} checked={form[opt.name]} onChange={handleChange}
+                  className="accent-foreground w-4 h-4" />
                 <span className="text-sm font-medium">{opt.label}</span>
               </label>
             ))}
@@ -260,17 +298,93 @@ export default function AdminUpload() {
 
       {/* Colors */}
       <Section icon={Layers} title="Available Colors">
-        <div className="flex flex-wrap gap-3">
-          {COLOR_OPTIONS.map(color => (
-            <button key={color.name} type="button" onClick={() => toggleColor(color.name)}
-              className={`flex items-center gap-2 px-4 py-2 border-2 text-sm font-medium transition-colors ${
-                selectedColors.includes(color.name) ? 'border-foreground bg-secondary' : 'border-border hover:border-foreground/40'
-              }`}>
-              <span className="w-4 h-4 border border-border flex-shrink-0" style={{ backgroundColor: color.hex }} />
-              {color.name}
-            </button>
-          ))}
+
+        {/* Preset palette */}
+        <p className="text-xs uppercase tracking-wider font-medium mb-3">Quick Select</p>
+        <div className="flex flex-wrap gap-2 mb-5">
+          {PRESET_COLORS.map(color => {
+            const isSelected = !!selectedColors.find(c => c.name === color.name);
+            return (
+              <button
+                key={color.name}
+                type="button"
+                title={color.name}
+                onClick={() => togglePresetColor(color)}
+                className={`w-8 h-8 rounded-full border-2 transition-all duration-150 ${
+                  isSelected
+                    ? 'border-foreground scale-110 shadow-md ring-2 ring-foreground/20'
+                    : 'border-transparent hover:border-foreground/40 hover:scale-105'
+                } ${color.name === 'White' ? 'border-border' : ''}`}
+                style={{ backgroundColor: color.hex }}
+              />
+            );
+          })}
         </div>
+
+        {/* Custom color input */}
+        <p className="text-xs uppercase tracking-wider font-medium mb-3">Custom Color</p>
+        <div className="flex items-center gap-3 mb-5">
+         <div className="relative group">
+  <input
+    type="color"
+    value={customColorHex}
+    onChange={e => setCustomColorHex(e.target.value)}
+    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+    title="Open color palette"
+  />
+  <div
+    className="w-10 h-10 rounded border-2 border-border group-hover:border-foreground transition-colors flex items-center justify-center"
+    style={{ backgroundColor: customColorHex }}
+  >
+    <span className="text-[9px] font-bold mix-blend-difference text-white select-none">▼</span>
+  </div>
+</div>
+          <input
+            type="text"
+            value={customColorName}
+            onChange={e => setCustomColorName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomColor())}
+            placeholder="Color name (e.g. Olive, Sand, Cobalt...)"
+            className="flex-1 border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground"
+          />
+          <button
+            type="button"
+            onClick={addCustomColor}
+            className="border border-border px-4 py-2 text-xs uppercase tracking-wider font-semibold hover:bg-muted transition-colors whitespace-nowrap"
+          >
+            + Add
+          </button>
+        </div>
+
+        {/* Selected chips */}
+        <p className="text-xs uppercase tracking-wider font-medium mb-3">
+          Selected{selectedColors.length > 0 ? ` (${selectedColors.length})` : ''}
+        </p>
+        {selectedColors.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {selectedColors.map(color => (
+              <div
+                key={color.name}
+                className="flex items-center gap-2 px-3 py-1.5 border-2 border-foreground bg-secondary text-sm font-medium"
+              >
+                <span
+                  className="w-3.5 h-3.5 rounded-full border border-border flex-shrink-0"
+                  style={{ backgroundColor: color.hex }}
+                />
+                {color.name}
+                <button
+                  type="button"
+                  onClick={() => removeColor(color.name)}
+                  className="ml-1 hover:text-red-500 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">No colors selected yet — pick from the palette or add a custom one above.</p>
+        )}
       </Section>
 
       {/* Sizes */}
@@ -279,7 +393,9 @@ export default function AdminUpload() {
           {SIZES.map(size => (
             <button key={size} type="button" onClick={() => toggleSize(size)}
               className={`px-4 py-2 text-sm font-medium border-2 transition-colors ${
-                selectedSizes.includes(size) ? 'bg-foreground text-background border-foreground' : 'border-border hover:border-foreground/40'
+                selectedSizes.includes(size)
+                  ? 'bg-foreground text-background border-foreground'
+                  : 'border-border hover:border-foreground/40'
               }`}>
               {size}
             </button>

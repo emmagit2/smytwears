@@ -16,12 +16,12 @@ export default function Disclaimer() {
     {
       icon: Truck,
       title: 'Shipping & Delivery',
-      content: `Delivery timelines provided (Standard: 3–5 business days; Express: 1–2 business days) are estimates and not guarantees. Delivery delays due to circumstances beyond our control — including weather events, logistics partner delays, or public holidays — are not the responsibility of SMYT. Free delivery applies to orders above ₦50,000 within Nigeria only.`,
+      content: `Delivery timelines provided (Standard: 3–5 business days; Express: 1–2 business days) are estimates and not guarantees. Delivery delays due to circumstances beyond our control — including weather events, logistics partner delays, or public holidays — are not the responsibility of SMYT.`,
     },
     {
       icon: AlertTriangle,
       title: 'Returns & Refunds',
-      content: `Items may be returned within 7 days of delivery if they are unworn, unwashed, and in original packaging with tags attached. SMYT reserves the right to refuse returns that do not meet these conditions. Refunds are processed within 5–7 business days after the returned item is inspected. Sale items are non-refundable.`,
+      content: `Items may be returned within 3–5  days of delivery if they are unworn, unwashed, and in original packaging with tags attached. SMYT reserves the right to refuse returns that do not meet these conditions. Refunds are processed within 5–7 business days after the returned item is inspected. Sale items are non-refundable.`,
     },
   ];
 

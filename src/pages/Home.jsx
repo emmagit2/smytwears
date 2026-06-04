@@ -154,10 +154,10 @@ const gridCols =
               View All <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
             {loadingBest
-              ? Array(4).fill(0).map((_, i) => <SkeletonCard key={i} />)
-              : bestSellers.map(product => <ProductCard key={product.id} product={product} />)
+              ? Array(5).fill(0).map((_, i) => <SkeletonCard key={i} />)
+              : bestSellers.slice(0, 5).map(product => <ProductCard key={product.id} product={product} />)
             }
           </div>
         </div>

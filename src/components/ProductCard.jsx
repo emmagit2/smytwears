@@ -25,6 +25,7 @@ export default function ProductCard({ product }) {
   const { addToCart }                    = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const wishlisted  = isInWishlist(product.id);
+  console.log('product:', product.name, 'in_stock:', product.in_stock, 'category:', product.category);
   const image       = getProductImage(product);
   const hasDiscount = !!product.original_price;
   const discountPct = hasDiscount
