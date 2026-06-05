@@ -38,8 +38,8 @@ export default function OrderConfirmation() {
 
       <p className="mt-6 text-xs text-muted-foreground">
         A confirmation email will be sent shortly. For questions, contact us at{' '}
-        <a href="mailto:selfmadeyoutoday@gmail.com" className="underline">
-          selfmadeyoutoday@gmail.com
+        <a href="mailto:info@smytwears.com" className="underline">
+          info@smytwears.com
         </a>
       </p>
 

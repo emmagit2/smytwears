@@ -138,8 +138,8 @@ export default function Contact() {
                 <Mail className="w-5 h-5 mt-0.5 text-muted-foreground flex-shrink-0" />
                 <div>
                   <p className="text-sm font-medium">Email</p>
-                  <a href="mailto:selfmadeyoutoday@gmail.com" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    selfmadeyoutoday@gmail.com
+                  <a href="mailto:info@smytwears.com" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    info@smytwears.com
                   </a>
                 </div>
               </div>

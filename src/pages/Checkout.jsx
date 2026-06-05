@@ -13,7 +13,7 @@ const STEPS = ['Contact & Delivery', 'Delivery Method', 'Payment'];
 
 const normalizeState = (name = '') => name.toLowerCase().trim();
 
-const getBaseDeliveryFee = (stateName = '', subtotal = 0) => {
+const getBaseDeliveryFee = (stateName = '') => {
   const s = normalizeState(stateName);
   if (s === 'lagos')                return 2500;
   if (s === 'fct' || s === 'abuja') return 3000;
@@ -113,7 +113,6 @@ function ContactStep({
           </FormField>
         </div>
 
-        {/* State — always enabled */}
         <FormField label="State" required>
           <select value={form.stateCode} onChange={onStateChange} className={inputClass}>
             <option value="">Select state</option>
@@ -123,7 +122,6 @@ function ContactStep({
           </select>
         </FormField>
 
-        {/* LGA — always tappable on mobile; shows prompt if no state yet */}
         <FormField label="LGA" required loading={loadingLgas}>
           <select
             name="lga"
@@ -145,7 +143,6 @@ function ContactStep({
           </select>
         </FormField>
 
-        {/* Ward — always tappable on mobile; shows prompt if no LGA yet */}
         <FormField label="Area / Ward" loading={loadingWards}>
           <select
             name="ward"
@@ -172,9 +169,7 @@ function ContactStep({
       {form.state && (
         <div className="mt-4 p-3 border border-border bg-secondary text-sm">
           <span className="text-muted-foreground">Estimated delivery to {form.state}: </span>
-          <span className="font-semibold">
-            {baseDeliveryFee === 0 ? '🎉 Free' : formatPrice(baseDeliveryFee)}
-          </span>
+          <span className="font-semibold">{formatPrice(baseDeliveryFee)}</span>
         </div>
       )}
 
@@ -195,7 +190,7 @@ function DeliveryMethodStep({ deliveryMethod, baseDeliveryFee, expressSurcharge,
       value: 'standard',
       label: 'Standard Delivery',
       desc:  '3–5 business days',
-      price: baseDeliveryFee === 0 ? 'FREE' : formatPrice(baseDeliveryFee),
+      price: formatPrice(baseDeliveryFee),
     },
     {
       value: 'express',
@@ -293,12 +288,9 @@ function OrderSummary({ items, subtotal, deliveryFee, total, stateName }) {
           <span>
             {!stateName
               ? <span className="text-muted-foreground text-xs">Select state</span>
-              : deliveryFee === 0
-              ? <span className="text-green-600 font-semibold">FREE</span>
               : formatPrice(deliveryFee)}
           </span>
         </div>
-       
         <div className="flex justify-between border-t border-border pt-2 font-bold">
           <span>Total</span>
           <span className="text-lg">{formatPrice(total)}</span>
@@ -332,7 +324,7 @@ export default function Checkout() {
   });
 
   // ── Derived totals ──────────────────────────────────────────────────────────
-  const baseDeliveryFee  = getBaseDeliveryFee(form.state, subtotal);
+  const baseDeliveryFee  = getBaseDeliveryFee(form.state);
   const expressSurcharge = getExpressSurcharge(form.state);
   const deliveryFee      = deliveryMethod === 'express'
     ? baseDeliveryFee + expressSurcharge
@@ -495,4 +487,4 @@ export default function Checkout() {
       </div>
     </div>
   );
-}
+}s
