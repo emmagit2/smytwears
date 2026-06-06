@@ -84,8 +84,8 @@ export default function Privacy() {
           <h2 className="text-sm uppercase tracking-wider font-bold mb-2">Contact Us</h2>
           <p className="text-gray-600 text-sm">
             For any privacy-related questions, contact us at:{' '}
-            <a href="mailto:selfmadeyoutoday@gmail.com" className="font-semibold" style={{ color: '#8e2424' }}>
-              selfmadeyoutoday@gmail.com
+            <a href="mailto:info@smytwears.com" className="font-semibold" style={{ color: '#8e2424' }}>
+            info@smytwears.com
             </a>
             {' '}or call{' '}
             <a href="tel:07054527285" className="font-semibold" style={{ color: '#8e2424' }}>
