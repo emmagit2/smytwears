@@ -20,8 +20,8 @@ const craftNodes = [
   },
   {
     type: 'video',
-    youtubeId: 'dQw4w9WgXcQ',
-    thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+    youtubeId: '2GtF8gnFHx1sAJ1J',
+    thumbnail: 'https://img.youtube.com/vi/2GtF8gnFHx1sAJ1J/hqdefault.jpg',
     label: 'Craft',
     angle: 45,
     desc: 'Stitched with precision. Every seam tells a story of mastery.',
