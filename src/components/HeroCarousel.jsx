@@ -5,7 +5,7 @@ import { IMAGES } from '@/data/images';
 
 const slides = [
   {
-    image: IMAGES.hero,
+    image: IMAGES.hero1,
     badge: 'New Collection',
     title: 'BUILT,\nNOT GIVEN.',
     subtitle: 'You build yourself daily. No shortcuts. No excuses. This is the uniform for those who create their own path.',
@@ -14,7 +14,7 @@ const slides = [
     accent: true,
   },
   {
-    image: IMAGES.menCollection,
+    image: IMAGES.hero2,
     badge: "Men's Collection",
     title: 'MOVE\nDIFFERENT.',
     subtitle: 'Premium streetwear engineered for the man who refuses to settle. Every stitch built with intention.',

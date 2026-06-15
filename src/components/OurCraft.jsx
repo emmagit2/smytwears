@@ -6,29 +6,29 @@ import { IMAGES } from '@/data/images';
 const craftNodes = [
   {
     type: 'image',
-    src: IMAGES.menCollection,
+    src: IMAGES.design,       // ← your new image
     label: 'Design',
     angle: -135,
     desc: 'Every piece starts as a concept — bold, intentional, purposeful.',
   },
   {
     type: 'image',
-    src: IMAGES.womenCollection,
+    src: IMAGES.fabric,       // ← your new image
     label: 'Fabric',
     angle: -45,
     desc: 'We source only premium heavyweight fabrics built to outlast trends.',
   },
   {
     type: 'video',
-    youtubeId: 'dQw4w9WgXcQ',
-    thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+    youtubeId: 'NZZbCk0Fas4',
+    thumbnail: 'https://img.youtube.com/vi/NZZbCk0Fas4/hqdefault.jpg',
     label: 'Craft',
     angle: 45,
     desc: 'Stitched with precision. Every seam tells a story of mastery.',
   },
   {
     type: 'image',
-    src: IMAGES.accessoriesCollection,
+    src: IMAGES.finish,       // ← your new image
     label: 'Finish',
     angle: 135,
     desc: 'Quality-checked before it ever reaches your hands.',

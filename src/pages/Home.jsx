@@ -9,12 +9,16 @@ import HeroCarousel from '../components/HeroCarousel';
 import Testimonials from '../components/Testimonials';
 import OurCraft from '../components/OurCraft';
 import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 
 const VISIBLE_COUNT = 4;
 const INTERVAL_MS   = 4000;
 
 export default function Home() {
   const [email, setEmail] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+const [emailDone, setEmailDone] = useState(false);
+const [emailError, setEmailError] = useState('');
 
   const { data: bestSellers = [], isLoading: loadingBest } = useQuery({
     queryKey: ['best-sellers'],
@@ -29,6 +33,22 @@ export default function Home() {
   const [displayedNew, setDisplayedNew]   = useState([]);
   const [fadeStates, setFadeStates]       = useState(Array(VISIBLE_COUNT).fill(true));
   const rotationRef                       = useRef(0);
+
+
+const handleHomeSubscribe = async () => {
+  setEmailError('');
+  if (!email || !email.includes('@')) { setEmailError('Enter a valid email.'); return; }
+  setEmailLoading(true);
+  const { error } = await supabase.from('subscribers').insert({ email: email.trim().toLowerCase() });
+  setEmailLoading(false);
+  if (error) {
+    setEmailError(error.code === '23505' ? 'Already subscribed!' : 'Something went wrong.');
+    return;
+  }
+  await supabase.functions.invoke('send-welcome-email', { body: { email: email.trim().toLowerCase() } });
+  setEmailDone(true);
+  setEmail('');
+};
 
   useEffect(() => {
     if (newArrivals.length > 0) {
@@ -266,24 +286,37 @@ const gridCols =
       </section>
 
       {/* Email Signup */}
+    
+{/* Email Signup */}
       <section className="bg-foreground text-background py-20">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Join the Movement</h2>
           <p className="mt-4 text-background/60 text-sm">
             Get early access to drops, exclusive deals, and brand updates. No spam — just the real stuff.
           </p>
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="Your email address"
-              className="flex-1 bg-transparent border border-background/20 px-4 py-3 text-sm placeholder:text-background/40 focus:outline-none focus:border-background/60"
-            />
-            <button className="bg-background text-foreground px-8 py-3 text-xs uppercase tracking-[0.2em] font-semibold hover:bg-background/90 transition-colors">
-              Subscribe
-            </button>
-          </div>
+
+          {emailDone ? (
+            <p className="mt-8 text-sm font-semibold text-green-400">You're in! Welcome to the family.</p>
+          ) : (
+            <div className="mt-8 flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleHomeSubscribe()}
+                placeholder="Your email address"
+                className="flex-1 bg-transparent border border-background/20 px-4 py-3 text-sm placeholder:text-background/40 focus:outline-none focus:border-background/60"
+              />
+              <button
+                onClick={handleHomeSubscribe}
+                disabled={emailLoading}
+                className="bg-background text-foreground px-8 py-3 text-xs uppercase tracking-[0.2em] font-semibold hover:bg-background/90 transition-colors disabled:opacity-60"
+              >
+                {emailLoading ? 'Subscribing...' : 'Subscribe'}
+              </button>
+            </div>
+          )}
+          {emailError && <p className="mt-2 text-xs text-red-400">{emailError}</p>}
         </div>
       </section>
     </div>

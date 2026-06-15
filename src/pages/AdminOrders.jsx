@@ -1,7 +1,33 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Eye, X, Check, Truck, Package, Clock, XCircle, RefreshCw, AlertCircle, ChevronDown } from 'lucide-react';
-import { ordersApi } from '@/api/apiClient';
-import { formatPrice } from '@/data/products';
+
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
+
+const API = import.meta.env.VITE_API_BASE_URL || '';
+
+async function apiFetch(path, options = {}) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token || '';
+
+  const res = await fetch(`${API}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...(options.headers || {}),
+    },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+// ─── Config ───────────────────────────────────────────────────────────────────
 
 const statusConfig = {
   pending:          { label: 'Pending',          classes: 'bg-yellow-50 text-yellow-700',  icon: Clock },
@@ -15,6 +41,10 @@ const statusConfig = {
 
 const VALID_STATUSES = ['confirmed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'];
 const paymentLabels  = { bank_transfer: 'Bank Transfer', card: 'Card', pay_on_delivery: 'Pay on Delivery' };
+
+function formatPrice(n) {
+  return '₦' + Number(n || 0).toLocaleString('en-NG');
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -40,54 +70,65 @@ function SummaryCard({ label, value }) {
 // ─── Order Detail Modal ───────────────────────────────────────────────────────
 
 function OrderModal({ order, onClose, onStatusUpdated }) {
-  const [newStatus, setNewStatus]       = useState('');
-  const [trackingInfo, setTrackingInfo] = useState('');
-  const [paymentRef, setPaymentRef]     = useState('');
-  const [updatingStatus,   setUpdatingStatus]   = useState(false);
+  const [newStatus,    setNewStatus]    = useState('');
+  const [trackingInfo, setTrackingInfo] = useState(order.tracking_info || '');
+  const [paymentRef,   setPaymentRef]   = useState('');
+
+  const [updatingStatus,    setUpdatingStatus]    = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
-  const [statusError,   setStatusError]   = useState('');
-  const [paymentError,  setPaymentError]  = useState('');
-  const [statusSuccess, setStatusSuccess] = useState('');
+  const [statusError,    setStatusError]    = useState('');
+  const [paymentError,   setPaymentError]   = useState('');
+  const [statusSuccess,  setStatusSuccess]  = useState('');
   const [paymentSuccess, setPaymentSuccess] = useState('');
 
-  const handleUpdateStatus = async () => {
+  // Update order status — calls POST /api/orders/status
+  async function handleUpdateStatus() {
     if (!newStatus) return;
     setUpdatingStatus(true);
     setStatusError('');
     setStatusSuccess('');
     try {
-      await ordersApi.updateStatus({
-        order_id:     order.id,
-        status:       newStatus,
-        ...(trackingInfo && { tracking_info: trackingInfo }),
+      await apiFetch('/api/orders/status', {
+        method: 'POST',
+        body: JSON.stringify({
+          order_id:     order.id,
+          status:       newStatus,
+          ...(trackingInfo.trim() && { tracking_info: trackingInfo.trim() }),
+        }),
       });
-      setStatusSuccess(`Status updated to ${statusConfig[newStatus]?.label ?? newStatus}`);
+      setStatusSuccess(`Status updated to "${statusConfig[newStatus]?.label ?? newStatus}"`);
       setNewStatus('');
-      setTrackingInfo('');
       onStatusUpdated();
     } catch (err) {
-      setStatusError(err?.response?.data?.error ?? 'Failed to update status');
+      setStatusError(err.message);
     } finally {
       setUpdatingStatus(false);
     }
-  };
+  }
 
-  const handleConfirmPayment = async () => {
+  // Confirm bank transfer — calls POST /api/orders/payment
+  async function handleConfirmPayment() {
     if (!paymentRef.trim()) return;
     setConfirmingPayment(true);
     setPaymentError('');
     setPaymentSuccess('');
     try {
-      await ordersApi.confirmPayment({ order_id: order.id, payment_reference: paymentRef.trim() });
+      await apiFetch('/api/orders/payment', {
+        method: 'POST',
+        body: JSON.stringify({
+          order_id:          order.id,
+          payment_reference: paymentRef.trim(),
+        }),
+      });
       setPaymentSuccess('Payment confirmed — order marked as confirmed');
       setPaymentRef('');
       onStatusUpdated();
     } catch (err) {
-      setPaymentError(err?.response?.data?.error ?? 'Failed to confirm payment');
+      setPaymentError(err.message);
     } finally {
       setConfirmingPayment(false);
     }
-  };
+  }
 
   const items         = Array.isArray(order.items) ? order.items : [];
   const showPaymentOp = order.payment_method === 'bank_transfer' && order.payment_status !== 'paid';
@@ -113,19 +154,16 @@ function OrderModal({ order, onClose, onStatusUpdated }) {
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Status row */}
+
+          {/* Status & payment row */}
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase tracking-widest font-semibold text-muted-foreground">Status</span>
             <StatusBadge status={order.status} />
           </div>
-
-          {/* Payment status */}
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase tracking-widest font-semibold text-muted-foreground">Payment</span>
             <span className={`text-xs px-2.5 py-1 font-semibold uppercase tracking-wider ${
-              order.payment_status === 'paid'
-                ? 'bg-green-50 text-green-700'
-                : 'bg-yellow-50 text-yellow-700'
+              order.payment_status === 'paid' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
             }`}>
               {order.payment_status ?? 'Pending'}
             </span>
@@ -137,9 +175,7 @@ function OrderModal({ order, onClose, onStatusUpdated }) {
             <p className="font-bold">{order.customer_name}</p>
             <p className="text-sm text-muted-foreground">{order.customer_email}</p>
             <p className="text-sm text-muted-foreground">{order.customer_phone}</p>
-            <p className="text-sm text-muted-foreground">
-              {order.delivery_address}, {order.delivery_state}
-            </p>
+            <p className="text-sm text-muted-foreground">{order.delivery_address}, {order.delivery_state}</p>
           </div>
 
           {/* Items */}
@@ -151,11 +187,11 @@ function OrderModal({ order, onClose, onStatusUpdated }) {
                   <div>
                     <p className="text-sm font-semibold">{item.product_name ?? item.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {item.color ?? ''}{item.color && item.size ? ' / ' : ''}{item.size ?? ''} × {item.quantity ?? item.qty ?? 1}
+                      {item.color ?? ''}{item.color && item.size ? ' / ' : ''}{item.size ?? ''} × {item.quantity ?? 1}
                     </p>
                   </div>
                   <p className="font-bold text-sm whitespace-nowrap ml-4">
-                    {formatPrice((item.unit_price ?? item.price ?? 0) * (item.quantity ?? item.qty ?? 1))}
+                    {formatPrice((item.unit_price ?? item.price ?? 0) * (item.quantity ?? 1))}
                   </p>
                 </div>
               ))}
@@ -166,7 +202,7 @@ function OrderModal({ order, onClose, onStatusUpdated }) {
           <div className="space-y-2 border-t border-border pt-4">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Subtotal</span>
-              <span>{formatPrice(order.subtotal ?? 0)}</span>
+              <span>{formatPrice(order.subtotal)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Delivery</span>
@@ -178,7 +214,7 @@ function OrderModal({ order, onClose, onStatusUpdated }) {
             </div>
             <div className="flex justify-between font-black text-base border-t border-border pt-2">
               <span>Total</span>
-              <span>{formatPrice(order.total ?? 0)}</span>
+              <span>{formatPrice(order.total)}</span>
             </div>
           </div>
 
@@ -188,7 +224,7 @@ function OrderModal({ order, onClose, onStatusUpdated }) {
             <span className="font-semibold">{paymentLabels[order.payment_method] ?? order.payment_method}</span>
           </div>
 
-          {/* ── Confirm Bank Transfer ─────────────────────────────────────── */}
+          {/* Confirm bank transfer */}
           {showPaymentOp && (
             <div className="border border-border p-4 space-y-3">
               <p className="text-xs uppercase tracking-widest font-bold">Confirm Bank Transfer</p>
@@ -210,7 +246,7 @@ function OrderModal({ order, onClose, onStatusUpdated }) {
             </div>
           )}
 
-          {/* ── Update Status ─────────────────────────────────────────────── */}
+          {/* Update status */}
           <div className="border border-border p-4 space-y-3">
             <p className="text-xs uppercase tracking-widest font-bold">Update Status</p>
             <div className="relative">
@@ -229,7 +265,7 @@ function OrderModal({ order, onClose, onStatusUpdated }) {
             <input
               value={trackingInfo}
               onChange={e => setTrackingInfo(e.target.value)}
-              placeholder="Tracking info / notes (optional)"
+              placeholder="Tracking info / waybill number (optional)"
               className="w-full border border-border px-3 py-2.5 text-sm focus:outline-none focus:border-foreground"
             />
             {statusError   && <p className="text-xs text-red-600">{statusError}</p>}
@@ -269,48 +305,44 @@ function OrderModal({ order, onClose, onStatusUpdated }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AdminOrders() {
-  const [orders, setOrders]           = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState('');
-  const [query, setQuery]             = useState('');
+  const [orders,       setOrders]       = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState('');
+  const [query,        setQuery]        = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selected, setSelected]       = useState(null);
-  const [page, setPage]               = useState(1);
-  const [totalCount, setTotalCount]   = useState(0);
+  const [selected,     setSelected]     = useState(null);
+  const [page,         setPage]         = useState(1);
+  const [totalCount,   setTotalCount]   = useState(0);
   const LIMIT = 20;
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const params = { page, limit: LIMIT };
-      if (statusFilter !== 'all') params.status = statusFilter;
-      const res = await ordersApi.list(params);
-      setOrders(res.data.orders ?? []);
-      setTotalCount(res.data.total ?? 0);
+      const params = new URLSearchParams({ page, limit: LIMIT });
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      const data = await apiFetch(`/api/orders?${params}`);
+      setOrders(data.orders ?? []);
+      setTotalCount(data.total ?? 0);
     } catch (err) {
-      setError(err?.response?.data?.error ?? 'Failed to load orders');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   }, [page, statusFilter]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
-
-  // Reset to page 1 when filter changes
   useEffect(() => { setPage(1); }, [statusFilter]);
 
   const handleStatusUpdated = useCallback(() => {
     fetchOrders();
-    // Re-fetch the selected order to reflect latest state
     if (selected) {
-      ordersApi.get(selected.id)
-        .then(res => setSelected(res.data))
+      apiFetch(`/api/orders/${selected.id}`)
+        .then(data => setSelected(data))
         .catch(() => {});
     }
   }, [fetchOrders, selected]);
 
-  // Client-side search filter (by order_number or customer_name)
   const filtered = orders.filter(o => {
     if (!query) return true;
     const q = query.toLowerCase();
@@ -320,21 +352,20 @@ export default function AdminOrders() {
     );
   });
 
-  // Summary stats derived from current page (real totals would need a summary endpoint)
-  const deliveredCount   = orders.filter(o => o.status === 'delivered').length;
-  const processingCount  = orders.filter(o => o.status === 'processing').length;
-  const pageRevenue      = orders.reduce((sum, o) => sum + (o.total ?? 0), 0);
-
-  const totalPages = Math.ceil(totalCount / LIMIT);
+  const deliveredCount  = orders.filter(o => o.status === 'delivered').length;
+  const processingCount = orders.filter(o => o.status === 'processing').length;
+  const pageRevenue     = orders.reduce((sum, o) => sum + (o.total ?? 0), 0);
+  const totalPages      = Math.ceil(totalCount / LIMIT);
 
   return (
     <div className="space-y-6">
+
       {/* Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <SummaryCard label="Total Orders"  value={totalCount} />
-        <SummaryCard label="Delivered"     value={deliveredCount} />
-        <SummaryCard label="Processing"    value={processingCount} />
-        <SummaryCard label="Page Revenue"  value={formatPrice(pageRevenue)} />
+        <SummaryCard label="Total Orders" value={totalCount} />
+        <SummaryCard label="Delivered"    value={deliveredCount} />
+        <SummaryCard label="Processing"   value={processingCount} />
+        <SummaryCard label="Page Revenue" value={formatPrice(pageRevenue)} />
       </div>
 
       {/* Toolbar */}
@@ -373,7 +404,7 @@ export default function AdminOrders() {
         </button>
       </div>
 
-      {/* Error state */}
+      {/* Error */}
       {error && (
         <div className="flex items-center gap-3 border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
           <AlertCircle className="w-4 h-4 shrink-0" />
@@ -397,9 +428,9 @@ export default function AdminOrders() {
                     key={h + i}
                     className={`text-left px-4 py-3 text-xs uppercase tracking-widest font-semibold text-muted-foreground
                       ${h === 'Customer' ? 'hidden sm:table-cell' : ''}
-                      ${h === 'Date'    ? 'hidden md:table-cell' : ''}
-                      ${h === 'Payment' ? 'hidden lg:table-cell' : ''}
-                      ${h === ''        ? 'text-right' : ''}
+                      ${h === 'Date'     ? 'hidden md:table-cell' : ''}
+                      ${h === 'Payment'  ? 'hidden lg:table-cell' : ''}
+                      ${h === ''         ? 'text-right'           : ''}
                     `}
                   >
                     {h}
@@ -434,7 +465,7 @@ export default function AdminOrders() {
                     </p>
                   </td>
                   <td className="px-4 py-4">
-                    <p className="font-bold">{formatPrice(order.total ?? 0)}</p>
+                    <p className="font-bold">{formatPrice(order.total)}</p>
                   </td>
                   <td className="px-4 py-4">
                     <StatusBadge status={order.status} />
@@ -458,7 +489,7 @@ export default function AdminOrders() {
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm">
           <p className="text-xs text-muted-foreground uppercase tracking-widest">
-            Page {page} of {totalPages} &mdash; {totalCount} orders
+            Page {page} of {totalPages} — {totalCount} orders
           </p>
           <div className="flex gap-2">
             <button

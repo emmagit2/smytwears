@@ -1,11 +1,28 @@
+// src/data/images.js
+
+import design          from '@/assets/design.webp';
+import fabric          from '@/assets/fabric.webp';
+import finish          from '@/assets/finish.webp';
+import menCollection   from '@/assets/menCollection.png';
+import womenCollection from '@/assets/womanCollection.png';
+import  accessoriesCollection from '@/assets/capCollection.webp';
+import hero1           from '@/assets/hero1.jpeg';  // ← add
+import hero2          from '@/assets/hero2.webp';  // ← add
+
+
 export const IMAGES = {
   hero: "https://media.base44.com/images/public/6a14ace4102f73d9a7883838/848d2920f_generated_a1a56d45.png",
   brandStory: "https://media.base44.com/images/public/6a14ace4102f73d9a7883838/7eb09b726_generated_1175b41b.png",
-  menCollection: "https://media.base44.com/images/public/6a14ace4102f73d9a7883838/7bb949a88_generated_658f7aa7.png",
-  womenCollection: "https://media.base44.com/images/public/6a14ace4102f73d9a7883838/6c9f121fe_generated_8cfca08e.png",
-  accessoriesCollection: "https://media.base44.com/images/public/6a14ace4102f73d9a7883838/cd0ee5829_generated_e458a12c.png",
+  menCollection,        
+  womenCollection, 
+  accessoriesCollection,
   founder: "https://media.base44.com/images/public/6a14ace4102f73d9a7883838/db55dc782_generated_5ff86f09.png",
   logo: "https://media.base44.com/images/public/user_69a93c23df926b837556fde6/764ab1c23_cropped-SMYT-WITH-TAGLINE-RED-TRANSPARENT-1-scaled-1-120x69.png",
+  design,
+  fabric,
+  hero1,
+   hero2,
+  finish,
   products: {
     1: "https://media.base44.com/images/public/6a14ace4102f73d9a7883838/135493fa6_generated_5477a415.png",
     2: "https://media.base44.com/images/public/6a14ace4102f73d9a7883838/9e935781a_generated_06703887.png",

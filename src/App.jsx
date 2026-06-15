@@ -6,6 +6,7 @@ import { WishlistProvider } from "./context/WishlistContext.jsx";
 import { AuthProvider } from "./lib/AuthContext.jsx";
 import { Toaster } from "react-hot-toast";
 import ScrollToTop from '@/components/ScrollToTop';
+import SubscribeModal from '@/components/SubscribeModal';
 
 
 import Layout from "./components/Layout.jsx";
@@ -50,6 +51,8 @@ export default function App() {
             <BrowserRouter>
               <Toaster position="top-right" />
                     <ScrollToTop /> 
+                      <SubscribeModal />   
+
               <Routes>
 
                 {/* OAuth callback — no layout */}
