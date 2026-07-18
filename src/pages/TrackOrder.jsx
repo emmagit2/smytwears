@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, CheckCircle, MapPin, Package, XCircle } from 'lucide-react';
+import { Search, CheckCircle, MapPin, Package, XCircle, Truck } from 'lucide-react';
+import { ordersApi } from '@/api/apiClient';
 
 const PRIMARY = '#8e2424';
 
@@ -57,6 +58,7 @@ export default function TrackOrder() {
     const params = new URLSearchParams(window.location.search);
     const num = params.get('order');
     if (num) { setQuery(num); fetchOrder(num); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchOrder(orderNumber) {
@@ -67,17 +69,16 @@ export default function TrackOrder() {
     setOrder(null);
 
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL || ''}/api/orders/track?order_number=${encodeURIComponent(num)}`
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || 'Order not found. Check your order number and try again.');
+      const { data } = await ordersApi.track(num);
+      setOrder(data);
+    } catch (err) {
+      if (err.response) {
+        // Server responded, but with an error (e.g. 404 order not found)
+        setError(err.response.data?.error || 'Order not found. Check your order number and try again.');
       } else {
-        setOrder(data);
+        // Request never reached the server (network/CORS/wrong URL issue)
+        setError('Could not connect to the server. Please try again.');
       }
-    } catch {
-      setError('Could not connect to the server. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -260,6 +261,33 @@ export default function TrackOrder() {
                     })}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Real Shipbubble courier + tracking link, once a shipment has been created */}
+            {order.shipping && (
+              <div className="bg-white border border-gray-100 shadow-sm p-6 flex items-center gap-4">
+                <div
+                  className="w-10 h-10 flex items-center justify-center text-white flex-shrink-0"
+                  style={{ backgroundColor: PRIMARY }}
+                >
+                  <Truck className="w-4 h-4" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-gray-400 uppercase tracking-wider">Courier</p>
+                  <p className="font-semibold text-sm mt-0.5">{order.shipping.courier_name || 'Assigned'}</p>
+                </div>
+                {order.shipping.tracking_url && (
+                  <a
+                    href={order.shipping.tracking_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-bold uppercase tracking-wider underline"
+                    style={{ color: PRIMARY }}
+                  >
+                    Live Tracking
+                  </a>
+                )}
               </div>
             )}
 

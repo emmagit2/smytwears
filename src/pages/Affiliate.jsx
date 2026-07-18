@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowRight, CheckCircle, Users, TrendingUp, DollarSign, Share2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, CheckCircle, Users, TrendingUp, DollarSign, Share2, Mail } from 'lucide-react';
 import { affiliatesApi } from '@/api/apiClient';
 import { IMAGES } from '@/data/images';
 
@@ -16,38 +17,32 @@ export default function Affiliate() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  const generateCode = (name) => {
-    const slug = name.split(' ')[0].toUpperCase().replace(/[^A-Z]/g, '');
-    const rand = Math.floor(1000 + Math.random() * 9000);
-    return `SMYT-${slug}${rand}`;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.full_name || !form.email || !form.phone) {
+      setError('Please fill in all required fields.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      // Backend only accepts these fields on apply — status, referral_code,
+      // and commission_rate are all set later by the backend, only once
+      // an admin approves the application.
+      await affiliatesApi.apply({
+        full_name: form.full_name,
+        email: form.email,
+        phone: form.phone,
+        instagram_handle: form.instagram_handle,
+      });
+      setSubmitted(true);
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!form.full_name || !form.email || !form.phone) {
-    setError('Please fill in all required fields.');
-    return;
-  }
-  setLoading(true);
-  setError('');
-  try {
-    await affiliatesApi.apply({
-      ...form,
-      referral_code: generateCode(form.full_name),
-      status: 'pending',
-      commission_rate: 10,
-      total_referrals: 0,
-      total_sales: 0,
-      total_earnings: 0,
-      paid_out: 0,
-    });
-    setSubmitted(true);
-  } catch (err) {
-    setError(err?.response?.data?.message || 'Something went wrong. Please try again.');
-  } finally {
-    setLoading(false);
-  }
-};
   return (
     <div>
       {/* Hero */}
@@ -113,7 +108,7 @@ const handleSubmit = async (e) => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             {[
               { step: '01', title: 'Apply', desc: 'Fill out the form below. We review all applications within 48 hours.' },
-              { step: '02', title: 'Share', desc: 'Get your unique code and share it on your socials, stories, or messages.' },
+              { step: '02', title: 'Get Approved', desc: 'Once approved, we email you your unique referral code.' },
               { step: '03', title: 'Earn', desc: 'Every time someone orders using your code, you earn 10% commission.' },
             ].map(({ step, title, desc }) => (
               <div key={step} className="relative">
@@ -138,9 +133,21 @@ const handleSubmit = async (e) => {
             <div className="text-center py-16 border border-gray-100 px-8">
               <CheckCircle className="w-12 h-12 mx-auto mb-4" style={{ color: '#8e2424' }} />
               <h3 className="text-xl font-black text-gray-900 mb-2">Application Received!</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                We&apos;ll review your application and reach out within 48 hours via email.
-                Once approved, you&apos;ll get your unique referral code.
+              <p className="text-sm text-gray-500 leading-relaxed max-w-sm mx-auto">
+                We review every application within 48 hours. You don&apos;t have a referral
+                code yet — once we approve you, it'll be waiting in your inbox.
+              </p>
+
+              <div className="mt-8 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-700 bg-gray-50 border border-gray-100 py-3 px-5 mx-auto max-w-sm">
+                <Mail className="w-3.5 h-3.5" style={{ color: '#8e2424' }} />
+                Watch your email for approval + your code
+              </div>
+
+              <p className="text-xs text-gray-400 mt-6">
+                Already approved?{' '}
+                <Link to="/affiliate/dashboard" className="font-bold underline" style={{ color: '#8e2424' }}>
+                  Go to your dashboard
+                </Link>
               </p>
             </div>
           ) : (

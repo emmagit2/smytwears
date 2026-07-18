@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
 import { formatPrice, getProductImage } from '@/data/products';
 import { ordersApi, paymentsApi, deliveryApi } from '@/api/apiClient';
+import { getStoredReferral } from '@/components/ReferralCapture';
 import { ChevronRight, Check, Loader2 } from 'lucide-react';
+import { trackInitiateCheckout } from "@/lib/metaPixel";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -11,17 +13,13 @@ const STEPS = ['Contact & Delivery', 'Delivery Method', 'Payment'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const normalizeState = (name = '') => name.toLowerCase().trim();
-
-const getBaseDeliveryFee = (stateName = '') => {
-  const s = normalizeState(stateName);
-  if (s === 'lagos')                return 2500;
-  if (s === 'fct' || s === 'abuja') return 3000;
-  return 3500;
+// Reads a cookie by name — used to grab Meta's _fbp/_fbc cookies so they
+// can be forwarded to the backend and attached to the server-side
+// Conversions API Purchase event later (for match quality + dedup).
+const getCookie = (name) => {
+  const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
+  return match ? match[2] : null;
 };
-
-const getExpressSurcharge = (stateName = '') =>
-  normalizeState(stateName) === 'lagos' ? 1200 : 2500;
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
 
@@ -41,7 +39,6 @@ function FormField({ label, required, loading: fieldLoading, children }) {
 }
 
 // ─── Step components ──────────────────────────────────────────────────────────
-
 function StepIndicator({ currentStep }) {
   return (
     <div className="flex items-center gap-2 mb-10 text-sm overflow-x-auto">
@@ -76,7 +73,7 @@ function StepIndicator({ currentStep }) {
 
 function ContactStep({
   form, allStates, lgas, wards,
-  loadingLgas, loadingWards, baseDeliveryFee,
+  loadingLgas, loadingWards, loadingRates,
   onFieldChange, onStateChange, onLgaChange,
   onContinue, error,
 }) {
@@ -166,71 +163,70 @@ function ContactStep({
 
       </div>
 
-      {form.state && (
-        <div className="mt-4 p-3 border border-border bg-secondary text-sm">
-          <span className="text-muted-foreground">Estimated delivery to {form.state}: </span>
-          <span className="font-semibold">{formatPrice(baseDeliveryFee)}</span>
-        </div>
-      )}
-
       <button
         onClick={onContinue}
-        className="mt-6 bg-foreground text-background px-10 py-3.5 text-xs uppercase tracking-[0.2em] font-semibold hover:bg-foreground/90 transition-colors"
+        disabled={loadingRates}
+        className="mt-6 bg-foreground text-background px-10 py-3.5 text-xs uppercase tracking-[0.2em] font-semibold hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
       >
-        Continue
+        {loadingRates
+          ? <><Loader2 className="w-4 h-4 animate-spin" /> Checking delivery rates...</>
+          : 'Continue'}
       </button>
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
     </div>
   );
 }
 
-function DeliveryMethodStep({ deliveryMethod, baseDeliveryFee, expressSurcharge, onSelect, onBack, onContinue }) {
-  const options = [
-    {
-      value: 'standard',
-      label: 'Standard Delivery',
-      desc:  '3–5 business days',
-      price: formatPrice(baseDeliveryFee),
-    },
-    {
-      value: 'express',
-      label: 'Express Delivery',
-      desc:  '1–2 business days',
-      price: formatPrice(baseDeliveryFee + expressSurcharge),
-    },
-  ];
-
+function DeliveryMethodStep({ couriers, selectedCourier, onSelect, onBack, onContinue }) {
   return (
     <div>
-      <h2 className="text-lg font-bold mb-6">Delivery Method</h2>
-      <div className="space-y-3">
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => onSelect(opt.value)}
-            className={`w-full flex items-center justify-between border p-5 text-left transition-colors ${
-              deliveryMethod === opt.value
-                ? 'border-foreground bg-secondary'
-                : 'border-border hover:border-foreground/30'
-            }`}
-          >
-            <div>
-              <p className="text-sm font-semibold">{opt.label}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
-            </div>
-            <span className="text-sm font-bold">{opt.price}</span>
-          </button>
-        ))}
-      </div>
+      <h2 className="text-lg font-bold mb-2">Delivery Method</h2>
+      <p className="text-xs text-muted-foreground mb-6">
+        Orders are processed within 3–5 business days before dispatch.
+        The delivery time shown below starts counting after that.
+      </p>
+
+      {couriers.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No delivery options available for this address. Please go back and check your address details.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {couriers.map((c) => (
+            <button
+              key={c.courier_id}
+              onClick={() => onSelect(c)}
+              className={`w-full flex items-center justify-between border p-5 text-left transition-colors ${
+                selectedCourier?.courier_id === c.courier_id
+                  ? 'border-foreground bg-secondary'
+                  : 'border-border hover:border-foreground/30'
+              }`}
+            >
+              <div>
+                <p className="text-sm font-semibold">{c.courier_name}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{c.delivery_eta}</p>
+              </div>
+              <span className="text-sm font-bold">{formatPrice(c.delivery_price)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex gap-3 mt-8">
-        <button onClick={onBack}     className="border border-border px-8 py-3.5 text-xs uppercase tracking-[0.2em] font-semibold hover:bg-muted">Back</button>
-        <button onClick={onContinue} className="bg-foreground text-background px-10 py-3.5 text-xs uppercase tracking-[0.2em] font-semibold hover:bg-foreground/90">Continue</button>
+        <button onClick={onBack} className="border border-border px-8 py-3.5 text-xs uppercase tracking-[0.2em] font-semibold hover:bg-muted">Back</button>
+        <button
+          onClick={onContinue}
+          disabled={!selectedCourier}
+          className="bg-foreground text-background px-10 py-3.5 text-xs uppercase tracking-[0.2em] font-semibold hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Continue
+        </button>
       </div>
     </div>
   );
 }
+function PaymentStep({ total, loading, error, onBack, onPlaceOrder, referralCode }) {
 
-function PaymentStep({ total, loading, error, onBack, onPlaceOrder }) {
   return (
     <div>
       <h2 className="text-lg font-bold mb-6">Payment</h2>
@@ -238,6 +234,11 @@ function PaymentStep({ total, loading, error, onBack, onPlaceOrder }) {
         <p className="font-semibold text-foreground mb-1">Pay securely via Paystack</p>
         <p>You'll be redirected to Paystack to complete your payment. All methods accepted — card, bank transfer, USSD, mobile money, and more.</p>
       </div>
+      {referralCode && (
+        <div className="border border-border p-3 mb-6 text-xs text-muted-foreground">
+          Referral code applied: <span className="font-semibold text-foreground">{referralCode}</span>
+        </div>
+      )}
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
       <div className="flex gap-3">
         <button onClick={onBack} className="border border-border px-8 py-3.5 text-xs uppercase tracking-[0.2em] font-semibold hover:bg-muted">Back</button>
@@ -255,7 +256,7 @@ function PaymentStep({ total, loading, error, onBack, onPlaceOrder }) {
   );
 }
 
-function OrderSummary({ items, subtotal, deliveryFee, total, stateName }) {
+function OrderSummary({ items, subtotal, deliveryFee, total, stateName, courierName }) {
   return (
     <div className="border border-border p-6 sticky top-24">
       <h2 className="text-sm uppercase tracking-[0.2em] font-semibold mb-6">Order Summary</h2>
@@ -284,10 +285,12 @@ function OrderSummary({ items, subtotal, deliveryFee, total, stateName }) {
           <span>{formatPrice(subtotal)}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Delivery</span>
+          <span className="text-muted-foreground">
+            Delivery{courierName ? ` (${courierName})` : ''}
+          </span>
           <span>
-            {!stateName
-              ? <span className="text-muted-foreground text-xs">Select state</span>
+            {!stateName || !deliveryFee
+              ? <span className="text-muted-foreground text-xs">Select delivery</span>
               : formatPrice(deliveryFee)}
           </span>
         </div>
@@ -303,10 +306,20 @@ function OrderSummary({ items, subtotal, deliveryFee, total, stateName }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function Checkout() {
+  // Cart state is read first, since the InitiateCheckout tracking call
+  // below needs `items` and `subtotal` to build a meaningful payload.
   const { items, subtotal, clearCart } = useCart();
 
+  useEffect(() => {
+    if (items.length === 0) return;
+    trackInitiateCheckout(items, subtotal);
+    // Fires once on mount using cart state at that point — matches the
+    // intent of "user started checkout with this cart", not a live feed
+    // of every subsequent quantity change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [step,           setStep]           = useState(0);
-  const [deliveryMethod, setDeliveryMethod] = useState('standard');
   const [loading,        setLoading]        = useState(false);
   const [error,          setError]          = useState('');
 
@@ -316,6 +329,12 @@ export default function Checkout() {
   const [loadingLgas,  setLoadingLgas]  = useState(false);
   const [loadingWards, setLoadingWards] = useState(false);
 
+  // Live Shipbubble rates for the current address + cart.
+  const [couriers,        setCouriers]        = useState([]);
+  const [selectedCourier, setSelectedCourier]  = useState(null);
+  const [requestToken,    setRequestToken]     = useState(null);
+  const [loadingRates,    setLoadingRates]     = useState(false);
+
   const [form, setForm] = useState({
     firstName: '', lastName: '',
     email: '',    phone: '',
@@ -323,12 +342,12 @@ export default function Checkout() {
     state: '',    lga: '',  ward: '',
   });
 
+  // Referral code captured earlier in the visit (see ReferralCapture.jsx),
+  // read once when the checkout page mounts.
+  const [referralCode] = useState(() => getStoredReferral());
+
   // ── Derived totals ──────────────────────────────────────────────────────────
-  const baseDeliveryFee  = getBaseDeliveryFee(form.state);
-  const expressSurcharge = getExpressSurcharge(form.state);
-  const deliveryFee      = deliveryMethod === 'express'
-    ? baseDeliveryFee + expressSurcharge
-    : baseDeliveryFee;
+  const deliveryFee = selectedCourier?.delivery_price || 0;
   const total = subtotal + deliveryFee;
 
   // ── Data fetching ───────────────────────────────────────────────────────────
@@ -373,14 +392,43 @@ export default function Checkout() {
   const handleLgaChange = (e) =>
     setForm((prev) => ({ ...prev, lga: e.target.value, ward: '' }));
 
-  const handleContactContinue = () => {
-    const { firstName, email, phone, address, stateCode, lga } = form;
+  const handleContactContinue = async () => {
+    const { firstName, email, phone, address, stateCode, lga, state } = form;
     if (!firstName || !email || !phone || !address || !stateCode || !lga) {
       setError('Please fill in all required fields.');
       return;
     }
     setError('');
-    setStep(1);
+    setLoadingRates(true);
+    // Reset any previously selected courier since the address may have changed.
+    setSelectedCourier(null);
+
+    try {
+      const { data } = await deliveryApi.rates({
+        customer: {
+          name:    `${form.firstName} ${form.lastName}`.trim(),
+          email:   form.email,
+          phone:   form.phone,
+          address: `${address}, ${form.ward}, ${lga}, ${state}, Nigeria`,
+        },
+        items: items.map((item) => ({
+          product_name: item.name,
+          quantity:     item.quantity,
+          unit_price:   item.price,
+        })),
+      });
+
+      setCouriers(data.couriers || []);
+      setRequestToken(data.request_token || null);
+      setStep(1);
+    } catch (err) {
+      setError(
+        err?.response?.data?.error ||
+        'Could not fetch delivery rates for this address. Please check the address and try again.'
+      );
+    } finally {
+      setLoadingRates(false);
+    }
   };
 
   const handlePlaceOrder = async () => {
@@ -394,7 +442,21 @@ export default function Checkout() {
         delivery_address: `${form.address}, ${form.ward}, ${form.lga}, ${form.state}`,
         delivery_state:   form.state,
         payment_method:   'card',
-        delivery_method:  deliveryMethod,
+        delivery_method:  selectedCourier?.courier_name,
+        delivery_fee:     deliveryFee,
+        // Shipbubble shipment info — backend saves these so it can create
+        // the actual shipment/label after payment is confirmed.
+        shipping: {
+          request_token: requestToken,
+          courier_id:    selectedCourier?.courier_id,
+          service_code:  selectedCourier?.service_code,
+        },
+        // Meta browser cookies — forwarded so the backend can attach them
+        // to the server-side Conversions API Purchase event later, once
+        // payment is confirmed (better match quality + dedup vs Pixel).
+        fbp: getCookie('_fbp'),
+        fbc: getCookie('_fbc'),
+        ...(referralCode && { affiliate_code: referralCode }),
         items: items.map((item) => ({
           product_id:   item.id,
           product_name: item.name,
@@ -446,7 +508,7 @@ export default function Checkout() {
               wards={wards}
               loadingLgas={loadingLgas}
               loadingWards={loadingWards}
-              baseDeliveryFee={baseDeliveryFee}
+              loadingRates={loadingRates}
               onFieldChange={handleFieldChange}
               onStateChange={handleStateChange}
               onLgaChange={handleLgaChange}
@@ -456,10 +518,9 @@ export default function Checkout() {
           )}
           {step === 1 && (
             <DeliveryMethodStep
-              deliveryMethod={deliveryMethod}
-              baseDeliveryFee={baseDeliveryFee}
-              expressSurcharge={expressSurcharge}
-              onSelect={setDeliveryMethod}
+              couriers={couriers}
+              selectedCourier={selectedCourier}
+              onSelect={setSelectedCourier}
               onBack={() => setStep(0)}
               onContinue={() => setStep(2)}
             />
@@ -471,6 +532,7 @@ export default function Checkout() {
               error={error}
               onBack={() => setStep(1)}
               onPlaceOrder={handlePlaceOrder}
+              referralCode={referralCode}
             />
           )}
         </div>
@@ -482,6 +544,7 @@ export default function Checkout() {
             deliveryFee={deliveryFee}
             total={total}
             stateName={form.state}
+            courierName={selectedCourier?.courier_name}
           />
         </div>
       </div>

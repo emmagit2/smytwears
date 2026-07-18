@@ -6,6 +6,12 @@ import { formatPrice } from '@/data/products';
 
 // Paystack redirects to:
 //   /payment/callback?reference=SMYT-XXXXXX&trxref=SMYT-XXXXXX
+//
+// NOTE: Purchase tracking (Meta Pixel) intentionally does NOT happen here.
+// /payments/verify only returns { success, status, order_number, already_paid } —
+// no items or total — so there isn't enough data on this page to build a
+// correct Purchase event. That tracking call belongs in OrderConfirmation.jsx,
+// where the full order (items + total) gets fetched.
 
 export default function PaymentCallback() {
   const navigate = useNavigate();

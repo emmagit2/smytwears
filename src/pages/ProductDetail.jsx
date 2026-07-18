@@ -8,6 +8,7 @@ import {
 import { fetchProductById, fetchRelatedProducts, formatPrice, getProductImage, getProductImages } from '@/data/products';
 import { useCart } from '@/context/CartContext';
 import { useQuery } from '@tanstack/react-query';
+import { trackViewContent } from "@/lib/metaPixel";
 
 /* ─── Styles ─────────────────────────────────────────────────────────────── */
 const FontStyle = () => (
@@ -364,6 +365,8 @@ function SimCard({ product: p, isNew }) {
 
 /* ── Main ── */
 export default function ProductDetail() {
+  
+
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
@@ -385,6 +388,12 @@ export default function ProductDetail() {
 
   const { data: product, isLoading } = useQuery({ queryKey:['product',id], queryFn:()=>fetchProductById(id) });
   const { data: related = [] } = useQuery({ queryKey:['related',product?.category,id], queryFn:()=>fetchRelatedProducts(product), enabled:!!product });
+
+useEffect(() => {
+  if (!product) return;
+  trackViewContent(product);
+}, [product]);
+
 
   const images  = product ? getProductImages(product) : [];
   const mainImg = images[selImg]?.url || (product ? getProductImage(product) : '');

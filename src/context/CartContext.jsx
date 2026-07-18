@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { trackAddToCart } from '@/lib/metaPixel';
 
 const CartContext = createContext();
-
 const FREE_DELIVERY_THRESHOLD = 50000;
 
 const getDeliveryFee = (state = '', subtotal = 0) => {
@@ -34,6 +34,7 @@ export function CartProvider({ children }) {
       return [...prev, { ...product, size, color, quantity, cartId: Date.now() }];
     });
     showToast(`${product.name} added to cart ✓`);
+    trackAddToCart(product, quantity); // fires AddToCart for every add-to-cart action, app-wide
   }, [showToast]);
 
   const removeFromCart = useCallback((cartId) => {

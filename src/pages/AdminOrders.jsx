@@ -1,31 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Eye, X, Check, Truck, Package, Clock, XCircle, RefreshCw, AlertCircle, ChevronDown } from 'lucide-react';
-
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
-
-const API = import.meta.env.VITE_API_BASE_URL || '';
-
-async function apiFetch(path, options = {}) {
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token || '';
-
-  const res = await fetch(`${API}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...(options.headers || {}),
-    },
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Request failed');
-  return data;
-}
+import { ordersApi } from '@/api/apiClient';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -39,11 +14,52 @@ const statusConfig = {
   cancelled:        { label: 'Cancelled',        classes: 'bg-red-50 text-red-700',        icon: XCircle },
 };
 
+// Badge styling for the raw Shipbubble shipment_status (separate from your
+// own order.status — this is the courier's own status string).
+const shipmentStatusClasses = {
+  pending:           'bg-yellow-50 text-yellow-700',
+  'in transit':      'bg-purple-50 text-purple-700',
+  'out for delivery':'bg-orange-50 text-orange-700',
+  delivered:         'bg-green-50 text-green-700',
+  cancelled:         'bg-red-50 text-red-700',
+};
+
 const VALID_STATUSES = ['confirmed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'];
 const paymentLabels  = { bank_transfer: 'Bank Transfer', card: 'Card', pay_on_delivery: 'Pay on Delivery' };
 
 function formatPrice(n) {
   return '₦' + Number(n || 0).toLocaleString('en-NG');
+}
+
+// Pulls a readable message out of an axios error — prefers the backend's
+// { error: "..." } body, falls back to axios's generic message.
+function getErrorMessage(err) {
+  return err?.response?.data?.error || err?.message || 'Request failed';
+}
+
+// Builds a short, readable "2x Blue Hoodie (M), 1x Cap" style summary from an
+// order's items array, so the table can show what was actually bought
+// without needing to open the modal.
+function summarizeItems(items, { maxChars = 46 } = {}) {
+  if (!Array.isArray(items) || items.length === 0) return '—';
+
+  const parts = items.map(item => {
+    const name = item.product_name ?? item.name ?? 'Item';
+    const qty  = item.quantity ?? 1;
+    const variant = [item.color, item.size].filter(Boolean).join(' / ');
+    return `${qty}× ${name}${variant ? ` (${variant})` : ''}`;
+  });
+
+  let summary = parts[0];
+  let shown = 1;
+  for (let i = 1; i < parts.length; i++) {
+    const candidate = `${summary}, ${parts[i]}`;
+    if (candidate.length > maxChars) break;
+    summary = candidate;
+    shown++;
+  }
+  const remaining = parts.length - shown;
+  return remaining > 0 ? `${summary} +${remaining} more` : summary;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -81,50 +97,44 @@ function OrderModal({ order, onClose, onStatusUpdated }) {
   const [statusSuccess,  setStatusSuccess]  = useState('');
   const [paymentSuccess, setPaymentSuccess] = useState('');
 
-  // Update order status — calls POST /api/orders/status
+  // Update order status — calls POST /orders/status
   async function handleUpdateStatus() {
     if (!newStatus) return;
     setUpdatingStatus(true);
     setStatusError('');
     setStatusSuccess('');
     try {
-      await apiFetch('/api/orders/status', {
-        method: 'POST',
-        body: JSON.stringify({
-          order_id:     order.id,
-          status:       newStatus,
-          ...(trackingInfo.trim() && { tracking_info: trackingInfo.trim() }),
-        }),
+      await ordersApi.updateStatus({
+        order_id:     order.id,
+        status:       newStatus,
+        ...(trackingInfo.trim() && { tracking_info: trackingInfo.trim() }),
       });
       setStatusSuccess(`Status updated to "${statusConfig[newStatus]?.label ?? newStatus}"`);
       setNewStatus('');
       onStatusUpdated();
     } catch (err) {
-      setStatusError(err.message);
+      setStatusError(getErrorMessage(err));
     } finally {
       setUpdatingStatus(false);
     }
   }
 
-  // Confirm bank transfer — calls POST /api/orders/payment
+  // Confirm bank transfer — calls POST /orders/payment
   async function handleConfirmPayment() {
     if (!paymentRef.trim()) return;
     setConfirmingPayment(true);
     setPaymentError('');
     setPaymentSuccess('');
     try {
-      await apiFetch('/api/orders/payment', {
-        method: 'POST',
-        body: JSON.stringify({
-          order_id:          order.id,
-          payment_reference: paymentRef.trim(),
-        }),
+      await ordersApi.confirmPayment({
+        order_id:          order.id,
+        payment_reference: paymentRef.trim(),
       });
       setPaymentSuccess('Payment confirmed — order marked as confirmed');
       setPaymentRef('');
       onStatusUpdated();
     } catch (err) {
-      setPaymentError(err.message);
+      setPaymentError(getErrorMessage(err));
     } finally {
       setConfirmingPayment(false);
     }
@@ -132,6 +142,7 @@ function OrderModal({ order, onClose, onStatusUpdated }) {
 
   const items         = Array.isArray(order.items) ? order.items : [];
   const showPaymentOp = order.payment_method === 'bank_transfer' && order.payment_status !== 'paid';
+  const shipping      = order.shipbubble_data || null;
 
   return (
     <div
@@ -176,6 +187,62 @@ function OrderModal({ order, onClose, onStatusUpdated }) {
             <p className="text-sm text-muted-foreground">{order.customer_email}</p>
             <p className="text-sm text-muted-foreground">{order.customer_phone}</p>
             <p className="text-sm text-muted-foreground">{order.delivery_address}, {order.delivery_state}</p>
+          </div>
+
+          {/* Delivery / Courier — the channel the customer picked at checkout */}
+          <div className="bg-secondary p-4 space-y-2">
+            <p className="text-xs uppercase tracking-widest font-semibold text-muted-foreground mb-2">Delivery</p>
+
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Courier Selected</span>
+              <span className="font-bold">
+                {shipping?.courier_name || order.delivery_method || '—'}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Delivery Price</span>
+              <span className="font-bold">
+                {(order.delivery_fee ?? 0) === 0
+                  ? <span className="text-green-600">FREE</span>
+                  : formatPrice(order.delivery_fee)}
+              </span>
+            </div>
+
+            {shipping?.shipment_order_id && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Shipment ID</span>
+                <span className="font-mono text-xs">{shipping.shipment_order_id}</span>
+              </div>
+            )}
+
+            {shipping?.shipment_status && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Courier Status</span>
+                <span className={`text-xs px-2 py-0.5 font-semibold uppercase tracking-wider ${
+                  shipmentStatusClasses[shipping.shipment_status.toLowerCase()] || 'bg-gray-50 text-gray-700'
+                }`}>
+                  {shipping.shipment_status}
+                </span>
+              </div>
+            )}
+
+            {shipping?.shipment_tracking_url && (
+              <a
+                href={shipping.shipment_tracking_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-center text-xs font-semibold uppercase tracking-wider underline pt-1"
+              >
+                View Live Tracking →
+              </a>
+            )}
+
+            {!shipping && (
+              <p className="text-xs text-muted-foreground pt-1">
+                No shipment created yet — this happens automatically once payment is confirmed.
+              </p>
+            )}
           </div>
 
           {/* Items */}
@@ -319,13 +386,13 @@ export default function AdminOrders() {
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams({ page, limit: LIMIT });
-      if (statusFilter !== 'all') params.set('status', statusFilter);
-      const data = await apiFetch(`/api/orders?${params}`);
+      const params = { page, limit: LIMIT };
+      if (statusFilter !== 'all') params.status = statusFilter;
+      const { data } = await ordersApi.list(params);
       setOrders(data.orders ?? []);
       setTotalCount(data.total ?? 0);
     } catch (err) {
-      setError(err.message);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -337,8 +404,8 @@ export default function AdminOrders() {
   const handleStatusUpdated = useCallback(() => {
     fetchOrders();
     if (selected) {
-      apiFetch(`/api/orders/${selected.id}`)
-        .then(data => setSelected(data))
+      ordersApi.get(selected.id)
+        .then(({ data }) => setSelected(data))
         .catch(() => {});
     }
   }, [fetchOrders, selected]);
@@ -423,13 +490,15 @@ export default function AdminOrders() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary">
-                {['Order', 'Customer', 'Date', 'Payment', 'Total', 'Status', ''].map((h, i) => (
+                {['Order', 'Customer', 'Items', 'Date', 'Payment', 'Courier', 'Total', 'Status', ''].map((h, i) => (
                   <th
                     key={h + i}
                     className={`text-left px-4 py-3 text-xs uppercase tracking-widest font-semibold text-muted-foreground
                       ${h === 'Customer' ? 'hidden sm:table-cell' : ''}
-                      ${h === 'Date'     ? 'hidden md:table-cell' : ''}
+                      ${h === 'Items'    ? 'hidden md:table-cell' : ''}
+                      ${h === 'Date'     ? 'hidden lg:table-cell' : ''}
                       ${h === 'Payment'  ? 'hidden lg:table-cell' : ''}
+                      ${h === 'Courier'  ? 'hidden lg:table-cell' : ''}
                       ${h === ''         ? 'text-right'           : ''}
                     `}
                   >
@@ -439,47 +508,65 @@ export default function AdminOrders() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(order => (
-                <tr key={order.id} className="border-b border-border hover:bg-secondary/50 transition-colors">
-                  <td className="px-4 py-4">
-                    <p className="font-bold text-xs font-mono">{order.order_number ?? order.id}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {Array.isArray(order.items) ? order.items.length : '?'} item{(Array.isArray(order.items) && order.items.length !== 1) ? 's' : ''}
-                    </p>
-                  </td>
-                  <td className="px-4 py-4 hidden sm:table-cell">
-                    <p className="font-medium">{order.customer_name}</p>
-                    <p className="text-xs text-muted-foreground">{order.customer_email}</p>
-                  </td>
-                  <td className="px-4 py-4 hidden md:table-cell">
-                    <p className="text-sm text-muted-foreground">
-                      {order.created_at ? new Date(order.created_at).toLocaleDateString('en-NG') : '—'}
-                    </p>
-                  </td>
-                  <td className="px-4 py-4 hidden lg:table-cell">
-                    <p className="text-xs">{paymentLabels[order.payment_method] ?? order.payment_method}</p>
-                    <p className={`text-xs mt-0.5 font-semibold ${
-                      order.payment_status === 'paid' ? 'text-green-600' : 'text-yellow-600'
-                    }`}>
-                      {order.payment_status ?? 'pending'}
-                    </p>
-                  </td>
-                  <td className="px-4 py-4">
-                    <p className="font-bold">{formatPrice(order.total)}</p>
-                  </td>
-                  <td className="px-4 py-4">
-                    <StatusBadge status={order.status} />
-                  </td>
-                  <td className="px-4 py-4 text-right">
-                    <button
-                      onClick={() => setSelected(order)}
-                      className="w-8 h-8 inline-flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {filtered.map(order => {
+                const items = Array.isArray(order.items) ? order.items : [];
+                return (
+                  <tr key={order.id} className="border-b border-border hover:bg-secondary/50 transition-colors">
+                    <td className="px-4 py-4">
+                      <p className="font-bold text-xs font-mono">{order.order_number ?? order.id}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {items.length} item{items.length !== 1 ? 's' : ''}
+                      </p>
+                    </td>
+                    <td className="px-4 py-4 hidden sm:table-cell">
+                      <p className="font-medium">{order.customer_name}</p>
+                      <p className="text-xs text-muted-foreground">{order.customer_email}</p>
+                    </td>
+                    <td className="px-4 py-4 hidden md:table-cell max-w-[220px]">
+                      <p className="text-xs text-muted-foreground" title={items.map(item => `${item.quantity ?? 1}x ${item.product_name ?? item.name}`).join(', ')}>
+                        {summarizeItems(items)}
+                      </p>
+                    </td>
+                    <td className="px-4 py-4 hidden lg:table-cell">
+                      <p className="text-sm text-muted-foreground">
+                        {order.created_at ? new Date(order.created_at).toLocaleDateString('en-NG') : '—'}
+                      </p>
+                    </td>
+                    <td className="px-4 py-4 hidden lg:table-cell">
+                      <p className="text-xs">{paymentLabels[order.payment_method] ?? order.payment_method}</p>
+                      <p className={`text-xs mt-0.5 font-semibold ${
+                        order.payment_status === 'paid' ? 'text-green-600' : 'text-yellow-600'
+                      }`}>
+                        {order.payment_status ?? 'pending'}
+                      </p>
+                    </td>
+                    <td className="px-4 py-4 hidden lg:table-cell">
+                      <p className="text-xs font-semibold">
+                        {order.shipbubble_data?.courier_name || order.delivery_method || '—'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {(order.delivery_fee ?? 0) === 0
+                          ? <span className="text-green-600 font-semibold">FREE</span>
+                          : formatPrice(order.delivery_fee)}
+                      </p>
+                    </td>
+                    <td className="px-4 py-4">
+                      <p className="font-bold">{formatPrice(order.total)}</p>
+                    </td>
+                    <td className="px-4 py-4">
+                      <StatusBadge status={order.status} />
+                    </td>
+                    <td className="px-4 py-4 text-right">
+                      <button
+                        onClick={() => setSelected(order)}
+                        className="w-8 h-8 inline-flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

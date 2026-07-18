@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { initMetaPixel } from "./lib/metaPixel";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/query-client.js";
@@ -7,6 +9,7 @@ import { AuthProvider } from "./lib/AuthContext.jsx";
 import { Toaster } from "react-hot-toast";
 import ScrollToTop from '@/components/ScrollToTop';
 import SubscribeModal from '@/components/SubscribeModal';
+import ReferralCapture from './components/ReferralCapture';
 
 
 import Layout from "./components/Layout.jsx";
@@ -43,6 +46,11 @@ import AdminAffiliates   from "./pages/AdminAffiliates.jsx";
 import PageNotFound from "./lib/PageNotFound.jsx";
 
 export default function App() {
+
+  useEffect(() => {
+    initMetaPixel();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -50,36 +58,34 @@ export default function App() {
           <WishlistProvider>
             <BrowserRouter>
               <Toaster position="top-right" />
-                    <ScrollToTop /> 
-                      <SubscribeModal />   
+              <ScrollToTop />
+              <ReferralCapture />
+              <SubscribeModal />
 
               <Routes>
 
-                {/* OAuth callback — no layout */}
                 <Route path="/auth/callback" element={<AuthCallback />} />
 
-                {/* Public routes with Layout */}
                 <Route element={<Layout />}>
-                  <Route path="/"                    element={<Home />} />
-                  <Route path="/shop"                element={<Shop />} />
-                  <Route path="/product/:id"         element={<ProductDetail />} />
-                  <Route path="/cart"                element={<Cart />} />
-                  <Route path="/checkout"            element={<Checkout />} />
-                  <Route path="/order-confirmation"  element={<OrderConfirmation />} />
-                  <Route path="/payment/callback"    element={<PaymentCallback />} />
-                  <Route path="/about"               element={<About />} />
-                  <Route path="/contact"             element={<Contact />} />
-                  <Route path="/track"               element={<TrackOrder />} />
-                  <Route path="/privacy"             element={<Privacy />} />
-                  <Route path="/disclaimer"          element={<Disclaimer />} />
-                  <Route path="/wishlist"            element={<Wishlist />} />
-                  <Route path="/login"               element={<SignIn />} />
-                  <Route path="/register"            element={<Register />} />
-                  <Route path="/affiliate"           element={<Affiliate />} />
+                  <Route path="/" element={<Home />} />
+                  <Route path="/shop" element={<Shop />} />
+                  <Route path="/product/:id" element={<ProductDetail />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/order-confirmation" element={<OrderConfirmation />} />
+                  <Route path="/payment/callback" element={<PaymentCallback />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/track" element={<TrackOrder />} />
+                  <Route path="/privacy" element={<Privacy />} />
+                  <Route path="/disclaimer" element={<Disclaimer />} />
+                  <Route path="/wishlist" element={<Wishlist />} />
+                  <Route path="/login" element={<SignIn />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/affiliate" element={<Affiliate />} />
                   <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
                 </Route>
 
-                {/* Admin routes — Admin.jsx handles its own nested Routes internally */}
                 <Route
                   path="/admin/*"
                   element={

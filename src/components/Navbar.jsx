@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Search, Heart, ShoppingBag, User, Menu, X, ChevronDown } from 'lucide-react';
+import { Search, Heart, ShoppingBag, User, Menu, X, ChevronDown, TrendingUp } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { IMAGES } from '@/data/images';
 import SearchOverlay from './SearchOverlay';
+import { supabase } from '@/lib/supabase';
+import { affiliatesApi } from '@/api/apiClient';
 
 const shopDropdown = [
   { label: 'All Products', path: '/shop' },
@@ -30,6 +32,7 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen]   = useState(false);
   const [scrolled, setScrolled]       = useState(false);
   const [shopHovered, setShopHovered] = useState(false);
+  const [isAffiliate, setIsAffiliate] = useState(false);
   const { itemCount }                 = useCart();
   const { wishlistCount }             = useWishlist();
   const location                      = useLocation();
@@ -49,6 +52,20 @@ export default function Navbar() {
     document.body.style.overflow = mobileOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [mobileOpen]);
+
+  useEffect(() => {
+    const checkIfAffiliate = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) return;
+      try {
+        const { data } = await affiliatesApi.checkAffiliate(user.email);
+        setIsAffiliate(data.isAffiliate);
+      } catch {
+        setIsAffiliate(false);
+      }
+    };
+    checkIfAffiliate();
+  }, []);
 
   // Base = white. Scrolled = brand color background, everything flips white.
   const navBg       = scrolled ? BRAND : '#ffffff';
@@ -301,6 +318,17 @@ export default function Navbar() {
                 )}
               </Link>
 
+              {isAffiliate && (
+                <Link
+                  to="/affiliate/dashboard"
+                  className="hidden sm:flex"
+                  style={{ padding: '8px', color: iconColor, borderRadius: '8px', transition: 'color 0.3s ease' }}
+                  aria-label="Affiliate Dashboard"
+                >
+                  <TrendingUp style={{ width: 17, height: 17 }} />
+                </Link>
+              )}
+
               <Link
                 to="/login"
                 className="hidden sm:flex"
@@ -387,6 +415,13 @@ export default function Navbar() {
               Wishlist {wishlistCount > 0 && `(${wishlistCount})`}
             </Link>
           </div>
+          {isAffiliate && (
+            <div style={{ borderBottom: '1px solid #f4f4f4' }}>
+              <Link to="/affiliate/dashboard" style={{ display: 'block', padding: '16px 0', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#1a1a1a', textDecoration: 'none' }}>
+                Affiliate Dashboard
+              </Link>
+            </div>
+          )}
         </div>
 
         <div style={{ padding: '16px 24px 40px' }}>

@@ -41,22 +41,51 @@ export const paymentsApi = {
   verify:     (reference)   => api.get(`/payments/verify?reference=${reference}`),
 };
 
+// ────────────────────────────────────────────────────────────
+// Affiliates — matches routes/affiliates.js exactly, including
+// the new PATCH /:id route for suspend / reinstate / commission edits.
+// ────────────────────────────────────────────────────────────
 export const affiliatesApi = {
-  apply:   (payload)    => api.post("/affiliates", payload),
-  approve: (payload)    => api.post("/affiliates/approve", payload),
-  stats:   (code)       => api.get(`/affiliates/stats?code=${code}`),
-  list:    (params)     => api.get("/affiliates", { params }),
-  payout:  (id, amt)    => api.patch(`/affiliates/${id}/payout`, { amount: amt }),
+  apply: (payload) => api.post("/affiliates", payload),
+
+  // First-time approval only: generates referral_code + sends welcome email.
+  // commission_rate is optional — omit it to use the DB default (10).
+  approve: (affiliate_id, commission_rate) =>
+    api.post("/affiliates/approve", { affiliate_id, commission_rate }),
+
+  stats: (code) => api.get(`/affiliates/stats?code=${code}`),
+  list:  (params) => api.get("/affiliates", { params }),
+  payout: (id, amount) => api.patch(`/affiliates/${id}/payout`, { amount }),
+
+  // Suspend, reinstate to pending, or re-approve an already-approved
+  // affiliate (i.e. one that already has a referral_code).
+  updateStatus: (id, status) => api.patch(`/affiliates/${id}`, { status }),
+
+  // Change an existing affiliate's commission rate independently of status.
+  updateCommission: (id, commission_rate) =>
+    api.patch(`/affiliates/${id}`, { commission_rate }),
+
+  // Email-code verification flow (login/signup without a password).
+  requestCode:    (email)         => api.post("/affiliates/request-code", { email }),
+  verifyCode:     (email, code)   => api.post("/affiliates/verify-code", { email, code }),
+  checkAffiliate: (email)         => api.get("/affiliates/check", { params: { email } }),
+
+  // Verify + save affiliate payout bank account (Paystack account resolve).
+  addBankDetails: (affiliateId, payload) =>
+    api.post(`/affiliates/${affiliateId}/bank-details`, payload),
 };
 
 export const contactApi = {
   submit: (payload) => api.post("/contact", payload),
 };
 
+// In apiClient.js, update the deliveryApi object to add `rates`:
+
 export const deliveryApi = {
   states: ()             => api.get("/delivery/states"),
   lgas:   (state)        => api.get(`/delivery/lgas/${state}`),
   wards:  (state, lga)   => api.get(`/delivery/wards/${state}/${encodeURIComponent(lga)}`),
+  rates:  (payload)      => api.post("/delivery/rates", payload), // NEW
 };
 
 export default api;

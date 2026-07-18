@@ -7,10 +7,6 @@ import { formatPrice, getProductImage } from '@/data/products';
 export default function Cart() {
   const { items, updateQuantity, removeFromCart, subtotal } = useCart();
 
-  const FREE_THRESHOLD = 50000;
-  const estimatedFee   = subtotal >= FREE_THRESHOLD ? 0 : 2500; // estimated — exact at checkout
-  const estimatedTotal = subtotal + estimatedFee;
-
   if (items.length === 0) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20 text-center">
@@ -104,24 +100,9 @@ export default function Cart() {
                 <span className="text-muted-foreground">Subtotal</span>
                 <span className="font-medium">{formatPrice(subtotal)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Delivery</span>
-                <span className="font-medium">
-                  {estimatedFee === 0
-                    ? <span className="text-green-600 font-semibold">FREE</span>
-                    : <span className="text-muted-foreground">Calculated at checkout</span>
-                  }
-                </span>
-              </div>
-              {estimatedFee > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Free delivery on orders above ₦50,000. Exact fee based on your location.
-                </p>
-              )}
-              <div className="border-t border-border pt-3 flex justify-between">
-                <span className="font-semibold">Subtotal</span>
-                <span className="font-bold text-lg">{formatPrice(subtotal)}</span>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Delivery fee is calculated at checkout based on your address.
+              </p>
             </div>
             <Link
               to="/checkout"
