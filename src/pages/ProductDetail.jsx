@@ -3,12 +3,13 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Minus, Plus, ChevronDown, ChevronUp, ArrowLeft,
   ZoomIn, X, ChevronLeft, ChevronRight,
-  Heart, Share2, ShieldCheck, Truck, RotateCcw, Star
+  Heart, Share2, RotateCcw, Star
 } from 'lucide-react';
 import { fetchProductById, fetchRelatedProducts, formatPrice, getProductImage, getProductImages } from '@/data/products';
 import { useCart } from '@/context/CartContext';
 import { useQuery } from '@tanstack/react-query';
 import { trackViewContent } from "@/lib/metaPixel";
+import { PaystackLogo, VerveLogo, MastercardLogo } from '@/components/PaymentLogos';
 
 /* ─── Styles ─────────────────────────────────────────────────────────────── */
 const FontStyle = () => (
@@ -106,13 +107,19 @@ const FontStyle = () => (
     .c-btn:hover { border-color:var(--ink); transform:translateY(-1px); }
     .c-btn.on { border-color:var(--ink); background:var(--ink); color:var(--paper); }
 
-    /* size buttons */
+    /* size buttons — modern, short + wide, solid black border */
     .sz-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
     .sz-guide { font-size:11px; color:var(--brand); text-decoration:underline; background:none; border:none; cursor:pointer; font-family:'Outfit',sans-serif; }
-    .sz-btns { display:flex; gap:6px; flex-wrap:wrap; }
-    .sz-btn { width:44px; height:38px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:500; letter-spacing:.04em; text-transform:uppercase; border:1.5px solid var(--line); background:none; cursor:pointer; transition:all .15s; border-radius:2px; color:var(--ink); font-family:'Outfit',sans-serif; }
-    .sz-btn:hover { border-color:var(--ink); transform:translateY(-1px); }
-    .sz-btn.on { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+    .sz-btns { display:flex; gap:8px; flex-wrap:wrap; }
+    .sz-btn {
+      min-width:52px; height:32px; padding:0 14px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:11px; font-weight:500; letter-spacing:.04em; text-transform:uppercase;
+      border:1.5px solid #000; background:none; cursor:pointer;
+      transition:all .15s; border-radius:6px; color:var(--ink); font-family:'Outfit',sans-serif;
+    }
+    .sz-btn:hover { background:var(--hover); transform:translateY(-1px); }
+    .sz-btn.on { background:#000; color:#fff; border-color:#000; }
 
     /* qty */
     .qty-wrap { display:inline-flex; border:1.5px solid var(--line); border-radius:2px; overflow:hidden; }
@@ -173,12 +180,14 @@ const FontStyle = () => (
     .btn-heart.on { border-color:var(--brand); background:var(--brand); color:#fff; }
     .btn-heart.pop { animation:heartPop .38s ease; }
 
-    /* trust */
-    .trust { display:flex; margin-top:14px; border:1px solid var(--line); border-radius:3px; overflow:hidden; }
+    /* trust strip — returns cell + payment logos cell */
+    .trust { display:flex; align-items:center; margin-top:14px; border:1px solid var(--line); border-radius:3px; overflow:hidden; }
     .trust-cell { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 5px; border-right:1px solid var(--line); }
     .trust-cell:last-child { border-right:none; }
     .trust-cell svg { color:var(--brand); }
     .trust-cell span { font-size:9px; font-weight:500; letter-spacing:.05em; color:var(--muted); text-transform:uppercase; text-align:center; line-height:1.3; }
+    .trust-pay-cell { flex:1; display:flex; align-items:center; justify-content:center; gap:10px; padding:10px 8px; }
+    .trust-pay-sep { height:16px; width:1px; background:var(--line); }
 
     /* accordion */
     .acc { margin-top:20px; border-top:1px solid var(--line); }
@@ -533,7 +542,13 @@ useEffect(() => {
             {/* Trust strip */}
             <div className="trust">
               <div className="trust-cell"><RotateCcw size={14}/><span>30-Day Returns</span></div>
-              <div className="trust-cell"><ShieldCheck size={14}/><span>Secure Pay</span></div>
+              <div className="trust-pay-cell">
+                <PaystackLogo height="h-4" />
+                <div className="trust-pay-sep" />
+                <VerveLogo height="h-4" />
+                <div className="trust-pay-sep" />
+                <MastercardLogo height="h-4" />
+              </div>
             </div>
 
             {/* Accordions */}

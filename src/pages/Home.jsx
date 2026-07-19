@@ -10,6 +10,8 @@ import Testimonials from '../components/Testimonials';
 import OurCraft from '../components/OurCraft';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import PaymentLogos from '../components/PaymentLogos';
+
 
 const VISIBLE_COUNT = 4;
 const INTERVAL_MS   = 4000;
@@ -244,21 +246,12 @@ const gridCols =
         </div>
       </section>
 
-      {/* Instagram */}
-    {/*  <section className="py-20 bg-secondary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Instagram className="w-6 h-6 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold tracking-tight">Follow us @selfmade.smyt</h2>
-          <p className="text-muted-foreground text-sm mt-2 mb-10">Join the movement on Instagram</p>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            {[IMAGES.hero, IMAGES.brandStory, IMAGES.menCollection, IMAGES.womenCollection, IMAGES.accessoriesCollection, IMAGES.founder].map((img, i) => (
-              <a key={i} href="https://www.instagram.com/selfmade.smyt" target="_blank" rel="noopener noreferrer" className="aspect-square overflow-hidden group">
-                <img src={img} alt="SMYT on Instagram" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-              </a>
-            ))}
-          </div>
+     {/* Payment Trust Strip */}
+      <section className="py-16 border-y border-border bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <PaymentLogos />
         </div>
-      </section>*/}
+      </section>
 
       {/* Affiliate Banner */}
       <section className="py-16 sm:py-20 overflow-hidden relative" style={{ backgroundColor: '#8e2424' }}>

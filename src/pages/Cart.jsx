@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Minus, Plus, X, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { formatPrice, getProductImage } from '@/data/products';
+import { PaystackLogo } from '@/components/PaymentLogos';
 
 export default function Cart() {
   const { items, updateQuantity, removeFromCart, subtotal } = useCart();
@@ -116,6 +117,12 @@ export default function Cart() {
             >
               Continue Shopping
             </Link>
+
+            {/* Secure payment note */}
+            <div className="mt-5 flex items-center justify-center gap-2">
+              <span className="text-[11px] text-muted-foreground">Secure payment by</span>
+              <PaystackLogo height="h-4" />
+            </div>
           </div>
         </div>
       </div>
