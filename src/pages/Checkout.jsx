@@ -4,6 +4,7 @@ import { useCart } from '@/context/CartContext';
 import { formatPrice, getProductImage } from '@/data/products';
 import { ordersApi, paymentsApi, deliveryApi } from '@/api/apiClient';
 import { getStoredReferral } from '@/components/ReferralCapture';
+import { PaystackLogo } from '@/components/PaymentLogos';
 import { ChevronRight, Check, Loader2 } from 'lucide-react';
 import { trackInitiateCheckout } from "@/lib/metaPixel";
 
@@ -231,7 +232,10 @@ function PaymentStep({ total, loading, error, onBack, onPlaceOrder, referralCode
     <div>
       <h2 className="text-lg font-bold mb-6">Payment</h2>
       <div className="border border-border p-5 bg-secondary text-sm text-muted-foreground mb-6">
-        <p className="font-semibold text-foreground mb-1">Pay securely via Paystack</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="font-semibold text-foreground">Pay securely via Paystack</p>
+          <PaystackLogo height="h-12" width="w-20" />
+        </div>
         <p>You'll be redirected to Paystack to complete your payment. All methods accepted — card, bank transfer, USSD, mobile money, and more.</p>
       </div>
       {referralCode && (

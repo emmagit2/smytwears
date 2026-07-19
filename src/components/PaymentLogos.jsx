@@ -4,34 +4,34 @@ import verveImg from '@/assets/verve.png';
 import mastercardImg from '@/assets/mastercard.png';
 
 // Paystack "P" icon
-export function PaystackLogo({ className = '', height = 'h-6' }) {
+export function PaystackLogo({ className = '', height = 'h-6', width = 'w-auto' }) {
   return (
     <img
       src={paystackImg}
       alt="Paystack"
-      className={`${height} w-auto object-contain ${className}`}
+      className={`${height} ${width} object-contain ${className}`}
     />
   );
 }
 
 // Verve card logo (own container)
-export function VerveLogo({ className = '', height = 'h-7' }) {
+export function VerveLogo({ className = '', height = 'h-7', width = 'w-auto' }) {
   return (
     <img
       src={verveImg}
       alt="Verve"
-      className={`${height} w-auto object-contain ${className}`}
+      className={`${height} ${width} object-contain ${className}`}
     />
   );
 }
 
 // Mastercard logo
-export function MastercardLogo({ className = '', height = 'h-7' }) {
+export function MastercardLogo({ className = '', height = 'h-7', width = 'w-auto' }) {
   return (
     <img
       src={mastercardImg}
       alt="Mastercard"
-      className={`${height} w-auto object-contain ${className}`}
+      className={`${height} ${width} object-contain ${className}`}
     />
   );
 }
